@@ -9,7 +9,7 @@
 Cette feature, **L'Avantage du Terrain**, identifie automatiquement l'ADN de chaque arène via l'API **Google Places** et applique un système de bonus contextuel qui influence le résultat des matchs et la conquête des territoires.
 
 📄 **Documentation technique complète** : [docs/FEATURE_7_RECAP.md](docs/FEATURE_7_RECAP.md)
-🎤 **Présentation** : `docs/presentation/` (la diapositive 8 contient une démo de la feature)
+🎤 **Présentation** : [Releases](https://github.com/ryad1602/SportsIn/releases) (la diapositive 8 contient une démo de la feature)
 
 ---
 
