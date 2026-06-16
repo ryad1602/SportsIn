@@ -1,0 +1,250 @@
+/* ============================================================
+   Styles — ContextBonusDisplay
+   Variables : --tc (terrain color), --tb (terrain bg)
+   ============================================================ */
+
+/* ── Mode compact ────────────────────────────────────────────── */
+.ctx-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.ctx-compact-terrain {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: color-mix(in srgb, var(--tb) 18%, transparent);
+  color: var(--tc);
+  border: 1px solid color-mix(in srgb, var(--tb) 40%, transparent);
+}
+
+.ctx-compact-total {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #4ade80;
+}
+.ctx-compact-total.neg { color: #f87171; }
+
+/* ── Panel complet ───────────────────────────────────────────── */
+.ctx-panel {
+  margin: 8px 0 4px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--tb, #6b7280) 35%, transparent);
+  background: color-mix(in srgb, var(--tb, #6b7280) 8%, #0f172a);
+}
+
+/* En-tête */
+.ctx-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--tb, #6b7280) 20%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--tb, #6b7280) 25%, transparent);
+}
+
+.ctx-terrain-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.ctx-terrain-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ctx-terrain-name {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--tc, #e2e8f0);
+  text-transform: uppercase;
+}
+
+.ctx-terrain-desc {
+  font-size: 0.7rem;
+  color: color-mix(in srgb, var(--tc, #94a3b8) 70%, #94a3b8);
+}
+
+.ctx-total-badge {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  background: color-mix(in srgb, #4ade80 15%, transparent);
+  color: #4ade80;
+  border: 1px solid color-mix(in srgb, #4ade80 30%, transparent);
+  white-space: nowrap;
+}
+.ctx-total-badge.neg {
+  background: color-mix(in srgb, #f87171 15%, transparent);
+  color: #f87171;
+  border-color: color-mix(in srgb, #f87171 30%, transparent);
+}
+
+/* Liste de bonus */
+.ctx-bonus-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+
+.ctx-bonus-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  transition: background 0.15s;
+}
+.ctx-bonus-item:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.ctx-bonus-icon { font-size: 0.85rem; width: 18px; text-align: center; }
+
+.ctx-bonus-label { flex: 1; color: #cbd5e1; }
+
+.ctx-bonus-value {
+  font-weight: 700;
+  min-width: 38px;
+  text-align: right;
+}
+
+/* Couleurs valeur selon type */
+.ctx-bonus-item.geo      .ctx-bonus-value { color: #38bdf8; }
+.ctx-bonus-item.aura     .ctx-bonus-value { color: #c084fc; }
+.ctx-bonus-item.affinity .ctx-bonus-value { color: #4ade80; }
+.ctx-bonus-item.opposed  .ctx-bonus-value { color: #f87171; }
+
+/* Hint aura sans synergie */
+.ctx-aura-hint {
+  padding: 5px 12px 7px;
+  font-size: 0.72rem;
+  color: #64748b;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.ctx-aura-hint strong { color: #94a3b8; }
+
+/* Couleurs valeur — time & mastery */
+.ctx-bonus-item.time    .ctx-bonus-value { color: #fbbf24; }
+.ctx-bonus-item.mastery .ctx-bonus-value { color: #a78bfa; }
+
+/* Confiance de classification */
+.ctx-confidence {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 6px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.ctx-confidence-bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.ctx-confidence-bar::after {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: calc(var(--conf, 0) * 100%);
+  border-radius: 2px;
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+  transition: width 0.4s ease;
+}
+
+.ctx-confidence-label {
+  font-size: 0.68rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+/* Terrain Mastery banner */
+.ctx-mastery-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: color-mix(in srgb, #7c3aed 12%, transparent);
+  border-top: 1px solid color-mix(in srgb, #7c3aed 25%, transparent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #c4b5fd;
+}
+
+/* Google Places evidence */
+.ctx-evidence {
+  padding: 6px 12px 8px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.ctx-evidence-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #475569;
+  margin-bottom: 4px;
+}
+
+.ctx-evidence-item {
+  font-size: 0.7rem;
+  color: #64748b;
+  padding: 1px 0;
+  line-height: 1.4;
+}
+
+.ctx-evidence-place {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.ctx-evidence-type {
+  color: #64748b;
+}
+
+.ctx-evidence-distance {
+  color: #475569;
+}
+
+/* Compact time period */
+.ctx-compact-time {
+  font-size: 0.7rem;
+  color: #fbbf24;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+/* Spinner */
+.ctx-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-top-color: #60a5fa;
+  border-radius: 50%;
+  animation: ctx-spin 0.7s linear infinite;
+  margin: 4px;
+}
+@keyframes ctx-spin { to { transform: rotate(360deg); } }

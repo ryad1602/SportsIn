@@ -9,12 +9,18 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedToken = sessionStorage.getItem("insport_token");
-    const savedUser = sessionStorage.getItem("insport_user");
+    const savedToken = localStorage.getItem("insport_token");
+    const savedUser = localStorage.getItem("insport_user");
 
     if (savedToken && savedUser) {
+      const userData = JSON.parse(savedUser);
       setToken(savedToken);
-      setUser(JSON.parse(savedUser));
+      setUser(userData);
+      // Restaure le team ID dans sessionStorage si l'utilisateur a une équipe
+      // et qu'il n'y a pas déjà un team ID pour cet onglet
+      if (userData.equipeId && !sessionStorage.getItem("insport_team_id")) {
+        sessionStorage.setItem("insport_team_id", userData.equipeId);
+      }
     }
     setLoading(false);
   }, []);
@@ -31,8 +37,15 @@ export function AuthProvider({ children }) {
     setToken(newToken);
     setUser(userData);
 
-    sessionStorage.setItem("insport_token", newToken);
-    sessionStorage.setItem("insport_user", JSON.stringify(userData));
+    localStorage.setItem("insport_token", newToken);
+    localStorage.setItem("insport_user", JSON.stringify(userData));
+
+    // Pré-peuple le team ID dans sessionStorage depuis le profil de connexion
+    if (userData.equipeId) {
+      sessionStorage.setItem("insport_team_id", userData.equipeId);
+    } else {
+      sessionStorage.removeItem("insport_team_id");
+    }
 
     return userData;
   }
@@ -49,8 +62,11 @@ export function AuthProvider({ children }) {
     setToken(newToken);
     setUser(userData);
 
-    sessionStorage.setItem("insport_token", newToken);
-    sessionStorage.setItem("insport_user", JSON.stringify(userData));
+    localStorage.setItem("insport_token", newToken);
+    localStorage.setItem("insport_user", JSON.stringify(userData));
+
+    // Nouvel utilisateur : pas encore d'équipe
+    sessionStorage.removeItem("insport_team_id");
 
     return userData;
   }
@@ -58,8 +74,8 @@ export function AuthProvider({ children }) {
   function logout() {
     setUser(null);
     setToken(null);
-    sessionStorage.removeItem("insport_token");
-    sessionStorage.removeItem("insport_user");
+    localStorage.removeItem("insport_token");
+    localStorage.removeItem("insport_user");
     sessionStorage.removeItem("insport_team_id");
   }
 

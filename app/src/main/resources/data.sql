@@ -46,18 +46,31 @@ INSERT OR IGNORE INTO joueur (id, pseudo, equipe_id) VALUES (20, 'Duverne', 5);
 -- ============================================
 -- ARÈNES (Stades)
 -- ============================================
-INSERT OR IGNORE INTO arene (id, nom, latitude, longitude, equipe_controle) VALUES 
-  ('stade_louis_ii', 'Stade Louis II', 43.7384, 7.4246, 1);
-INSERT OR IGNORE INTO arene (id, nom, latitude, longitude, equipe_controle) VALUES 
-  ('parc_princes', 'Parc des Princes', 48.8432, 2.2527, 2);
-INSERT OR IGNORE INTO arene (id, nom, latitude, longitude, equipe_controle) VALUES 
-  ('groupama_stadium', 'Groupama Stadium', 45.7735, 4.8922, 3);
-INSERT OR IGNORE INTO arene (id, nom, latitude, longitude, equipe_controle) VALUES 
-  ('stade_beaujoire', 'Stade de la Beaujoire', 47.2679, -1.4804, 4);
-INSERT OR IGNORE INTO arene (id, nom, latitude, longitude, equipe_controle) VALUES 
-  ('stade_francis_le_ble', 'Stade Francis Le Blé', 48.3988, -4.4860, 5);
-INSERT OR IGNORE INTO arene (id, nom, latitude, longitude, equipe_controle) VALUES 
-  ('velodrome', 'Stade Vélodrome', 43.2620, 5.3963, NULL);
+-- Colonne dna_type : types épiques influencés uniquement par l'environnement + la météo
+-- ABYSSE  = zones aquatiques (côtes, rivières, ports) — s'active sous la pluie
+-- OLYMPE  = hauts lieux iconiques (stades, monuments)  — s'active par ciel dégagé
+-- EDEN    = sanctuaires naturels (parcs, forêts)        — s'active sous la neige/nuages
+-- NEXUS   = carrefours d'énergie (gares, industries)    — s'active à l'orage
+-- Arènes de base : UPSERT pour corriger le dna_type même si la ligne existe déjà en DB
+-- (INSERT OR IGNORE ne mettrait pas à jour une ligne existante avec une valeur erronée)
+INSERT INTO arene (id, nom, latitude, longitude, equipe_controle, dna_type)
+  VALUES ('stade_louis_ii', 'Stade Louis II', 43.7384, 7.4246, 1, 'ABYSSE')
+  ON CONFLICT(id) DO UPDATE SET dna_type = 'ABYSSE';
+INSERT INTO arene (id, nom, latitude, longitude, equipe_controle, dna_type)
+  VALUES ('parc_princes', 'Parc des Princes', 48.8432, 2.2527, 2, 'OLYMPE')
+  ON CONFLICT(id) DO UPDATE SET dna_type = 'OLYMPE';
+INSERT INTO arene (id, nom, latitude, longitude, equipe_controle, dna_type)
+  VALUES ('groupama_stadium', 'Groupama Stadium', 45.7735, 4.8922, 3, 'NEXUS')
+  ON CONFLICT(id) DO UPDATE SET dna_type = 'NEXUS';
+INSERT INTO arene (id, nom, latitude, longitude, equipe_controle, dna_type)
+  VALUES ('stade_beaujoire', 'Stade de la Beaujoire', 47.2679, -1.4804, 4, 'ABYSSE')
+  ON CONFLICT(id) DO UPDATE SET dna_type = 'ABYSSE';
+INSERT INTO arene (id, nom, latitude, longitude, equipe_controle, dna_type)
+  VALUES ('stade_francis_le_ble', 'Stade Francis Le Blé', 48.3988, -4.4860, 5, 'ABYSSE')
+  ON CONFLICT(id) DO UPDATE SET dna_type = 'ABYSSE';
+INSERT INTO arene (id, nom, latitude, longitude, equipe_controle, dna_type)
+  VALUES ('velodrome', 'Stade Vélodrome', 43.2620, 5.3963, NULL, 'NEXUS')
+  ON CONFLICT(id) DO UPDATE SET dna_type = 'NEXUS';
 
 -- ============================================
 -- SPORTS DISPONIBLES PAR ARÈNE

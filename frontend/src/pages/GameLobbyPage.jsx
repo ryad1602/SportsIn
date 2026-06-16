@@ -1,35 +1,35 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { gameAPI } from "../api/api.js";
+import Header from "../components/Header.jsx";
+import {
+  IconArrowRight, IconPlay, IconX, IconUsers, IconTrophy,
+  IconMapPin, IconClock, IconAlertTriangle,
+} from "../components/Icons.jsx";
+import "../styles/game-lobby.css";
+
+const TIMEOUT_SECONDS = 120;
 
 function GameLobbyPage() {
   const { gameId } = useParams();
   const navigate = useNavigate();
 
-  const [game, setGame] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [game, setGame]         = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(null);
   const [starting, setStarting] = useState(false);
-
-  // Pour rejoindre en tant qu'adversaire
-  const [joining, setJoining] = useState(false);
-
-  // Timer et timeout pour l'attente
-  const [waitTime, setWaitTime] = useState(0);
+  const [joining, setJoining]   = useState(false);
   const [cancelling, setCancelling] = useState(false);
-  const TIMEOUT_SECONDS = 120; // 2 minutes
+  const [waitTime, setWaitTime] = useState(0);
 
   const loadGame = useCallback(async () => {
     try {
       const gameData = await gameAPI.getById(gameId);
       setGame(gameData);
 
-      // Si le jeu est en cours, rediriger vers la session active
       if (gameData.state === "IN_PROGRESS" && gameData.sessionId) {
         navigate(`/session/active?gameId=${gameId}`);
       }
-
-      // Si le jeu est terminé, rediriger vers les résultats
       if (gameData.state === "COMPLETED" && gameData.sessionId) {
         navigate(`/game/result/${gameData.sessionId}`);
       }
@@ -43,24 +43,16 @@ function GameLobbyPage() {
 
   useEffect(() => {
     loadGame();
-
-    // Polling toutes les 3 secondes pour vérifier si un adversaire a rejoint
     const interval = setInterval(loadGame, 3000);
     return () => clearInterval(interval);
   }, [loadGame]);
 
-  // Timer pour afficher le temps d'attente
   useEffect(() => {
     if (game?.state !== "WAITING") return;
-
-    const timer = setInterval(() => {
-      setWaitTime((prev) => prev + 1);
-    }, 1000);
-
+    const timer = setInterval(() => setWaitTime((t) => t + 1), 1000);
     return () => clearInterval(timer);
   }, [game?.state]);
 
-  // Annuler la recherche et supprimer le game
   const handleCancelSearch = async () => {
     try {
       setCancelling(true);
@@ -74,15 +66,28 @@ function GameLobbyPage() {
     }
   };
 
-
   const handleJoinGame = async (teamId) => {
+    if (!teamId || isNaN(teamId)) {
+      setError("Tu dois rejoindre une équipe avant de pouvoir te battre");
+      return;
+    }
     try {
       setJoining(true);
       setError(null);
       await gameAPI.join(gameId, teamId);
       await loadGame();
     } catch (err) {
-      setError("Erreur lors de la jonction au jeu");
+      // Affiche le message exact renvoyé par le backend
+      const msg = err?.message || "";
+      if (msg.includes("même équipe") || msg.includes("affronter elle-même")) {
+        setError("Vous êtes dans la même équipe que le créateur — impossible de s'affronter");
+      } else if (msg.includes("non trouvée") || msg.includes("introuvable")) {
+        setError("Équipe ou jeu introuvable — vérifie que ton équipe existe encore");
+      } else if (msg.includes("plus en attente")) {
+        setError("Ce jeu a déjà trouvé un adversaire");
+      } else {
+        setError(msg || "Erreur lors de la jonction au jeu");
+      }
       console.error(err);
     } finally {
       setJoining(false);
@@ -94,311 +99,217 @@ function GameLobbyPage() {
       setStarting(true);
       setError(null);
       const updatedGame = await gameAPI.start(gameId);
-
       if (updatedGame.sessionId) {
         navigate(`/session/active?gameId=${gameId}`);
       }
     } catch (err) {
-      setError("Erreur lors du démarrage du jeu");
+      const msg = err?.message || "";
+      setError(msg.includes("MATCHED") ? "Attends que l'adversaire rejoigne d'abord" : (msg || "Erreur lors du démarrage du jeu"));
       console.error(err);
     } finally {
       setStarting(false);
     }
   };
 
-  // Styles
-  const containerStyle = {
-    width: "100vw",
-    minHeight: "100vh",
-    display: "flex",
-    flexDirection: "column",
-    backgroundColor: "#111",
-    color: "white",
-  };
+  const formatTime = (s) =>
+    `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
-  const mainStyle = {
-    padding: "32px",
-    maxWidth: "600px",
-    margin: "0 auto",
-    width: "100%",
-  };
-
-  const cardStyle = {
-    background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
-    borderRadius: "16px",
-    padding: "24px",
-    marginBottom: "20px",
-    border: "1px solid #333",
-  };
-
-  const teamCardStyle = {
-    background: "#1a1a2e",
-    borderRadius: "12px",
-    padding: "20px",
-    display: "flex",
-    alignItems: "center",
-    gap: "16px",
-    border: "1px solid #333",
-  };
-
-  const vsStyle = {
-    fontSize: "24px",
-    fontWeight: "bold",
-    color: "#ff9800",
-    textAlign: "center",
-    margin: "16px 0",
-  };
-
-  const buttonStyle = {
-    width: "100%",
-    padding: "16px 24px",
-    borderRadius: "12px",
-    border: "none",
-    cursor: "pointer",
-    fontSize: "16px",
-    fontWeight: "600",
-    background: "linear-gradient(135deg, #4caf50 0%, #388e3c 100%)",
-    color: "white",
-    transition: "all 0.2s",
-  };
-
-  const waitingStyle = {
-    textAlign: "center",
-    padding: "40px 20px",
-  };
-
-  const pulseStyle = {
-    width: "60px",
-    height: "60px",
-    borderRadius: "50%",
-    background: "#1e88e5",
-    margin: "0 auto 20px",
-    animation: "pulse 2s infinite",
-  };
-
-  const backButtonStyle = {
-    padding: "8px 16px",
-    borderRadius: "8px",
-    border: "1px solid #333",
-    background: "transparent",
-    color: "white",
-    cursor: "pointer",
-    marginBottom: "20px",
-  };
-
+  /* ── Loading ─────────────────────────────── */
   if (loading) {
     return (
-      <div style={containerStyle}>
-        <main style={mainStyle}>
-          <p style={{ textAlign: "center", opacity: 0.7 }}>Chargement...</p>
-        </main>
-      </div>
-    );
-  }
-
-  if (error && !game) {
-    return (
-      <div style={containerStyle}>
-        <main style={mainStyle}>
-          <button style={backButtonStyle} onClick={() => navigate("/")}>
-            ← Retour
-          </button>
-          <div style={{ ...cardStyle, borderColor: "#e53935" }}>
-            <p style={{ color: "#e53935", margin: 0 }}>{error}</p>
+      <div className="lobby-container">
+        <Header />
+        <main className="lobby-main">
+          <div className="lobby-loading">
+            <div className="spinner" />
+            Chargement du lobby...
           </div>
         </main>
       </div>
     );
   }
 
-  const isWaiting = game?.state === "WAITING";
-  const isMatched = game?.state === "MATCHED";
+  /* ── Fatal error ─────────────────────────── */
+  if (error && !game) {
+    return (
+      <div className="lobby-container">
+        <Header />
+        <main className="lobby-main">
+          <button className="lobby-back" onClick={() => navigate("/")}>
+            <IconArrowRight size={14} style={{ transform: "rotate(180deg)" }} />
+            Retour
+          </button>
+          <div className="lobby-error">
+            <IconAlertTriangle size={18} />
+            {error}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const isWaiting   = game?.state === "WAITING";
+  const isMatched   = game?.state === "MATCHED";
   const playerTeamId = sessionStorage.getItem("insport_team_id");
-  const isCreator = game?.creatorTeam?.id?.toString() === playerTeamId;
+  const isCreator   = game?.creatorTeam?.id?.toString() === playerTeamId;
 
   return (
-    <div style={containerStyle}>
-      <main style={mainStyle}>
-        <button style={backButtonStyle} onClick={() => navigate("/")}>
-          ← Retour
+    <div className="lobby-container">
+      <Header />
+      <main className="lobby-main">
+
+        {/* Back */}
+        <button className="lobby-back" onClick={() => navigate("/")}>
+          <IconArrowRight size={14} style={{ transform: "rotate(180deg)" }} />
+          Retour
         </button>
 
-        <h1 style={{ marginBottom: "8px" }}>Lobby du jeu</h1>
-        <p style={{ opacity: 0.7, marginBottom: "24px" }}>
-          {isWaiting ? "En attente d'un adversaire..." : "Adversaire trouvé !"}
-        </p>
+        {/* Page header */}
+        <div className="lobby-header">
+          <h1 className="lobby-title">Lobby</h1>
+          <p className="lobby-subtitle">
+            {isWaiting ? "En attente d'un adversaire…" : "Adversaire trouvé — prêt à jouer !"}
+          </p>
+        </div>
 
+        {/* Error (non-fatal) */}
         {error && (
-          <div style={{ ...cardStyle, borderColor: "#e53935", marginBottom: "20px" }}>
-            <p style={{ color: "#e53935", margin: 0 }}>{error}</p>
+          <div className="lobby-error">
+            <IconAlertTriangle size={18} />
+            {error}
           </div>
         )}
 
-        {/* Statut du jeu */}
-        <div style={cardStyle}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-            <span style={{ fontSize: "12px", opacity: 0.7 }}>STATUT</span>
-            <span style={{
-              padding: "4px 12px",
-              borderRadius: "20px",
-              fontSize: "12px",
-              fontWeight: "600",
-              background: isMatched ? "#4caf50" : "#ff9800",
-              color: "white",
-            }}>
-              {isWaiting ? "EN ATTENTE" : isMatched ? "PRÊT" : game?.state}
+        {/* Main card */}
+        <div className="lobby-card">
+          <div className="lobby-status-row">
+            <span className="lobby-status-label">Statut du match</span>
+            <span className={`lobby-badge ${isMatched ? "lobby-badge--ready" : "lobby-badge--waiting"}`}>
+              {isWaiting ? "En attente" : isMatched ? "Prêt" : game?.state}
             </span>
           </div>
 
-          {/* Équipe créatrice */}
-          <div style={teamCardStyle}>
-            <div style={{
-              width: "50px",
-              height: "50px",
-              borderRadius: "10px",
-              background: "linear-gradient(135deg, #1e88e5 0%, #1565c0 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "20px",
-              fontWeight: "bold",
-            }}>
-              {game?.creatorTeam?.nom?.charAt(0).toUpperCase() || "?"}
+          {/* Creator team */}
+          <div className="lobby-team">
+            <div className="lobby-team__avatar lobby-team__avatar--creator">
+              {game?.creatorTeam?.nom?.charAt(0).toUpperCase() ?? "?"}
             </div>
             <div>
-              <p style={{ margin: 0, fontWeight: "600", fontSize: "18px" }}>
-                {game?.creatorTeam?.nom || "Équipe créatrice"}
-              </p>
-              <p style={{ margin: "4px 0 0", fontSize: "12px", opacity: 0.7 }}>Créateur</p>
+              <p className="lobby-team__name">{game?.creatorTeam?.nom ?? "Équipe créatrice"}</p>
+              <p className="lobby-team__role">Créateur</p>
             </div>
           </div>
 
-          <div style={vsStyle}>VS</div>
+          {/* VS separator */}
+          <div className="lobby-vs">
+            <div className="lobby-vs__line" />
+            <span className="lobby-vs__text">VS</span>
+            <div className="lobby-vs__line" />
+          </div>
 
-          {/* Équipe adverse ou attente */}
+          {/* Opponent or waiting */}
           {game?.opponentTeam ? (
-            <div style={teamCardStyle}>
-              <div style={{
-                width: "50px",
-                height: "50px",
-                borderRadius: "10px",
-                background: "linear-gradient(135deg, #e53935 0%, #c62828 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "20px",
-                fontWeight: "bold",
-              }}>
-                {game.opponentTeam.nom?.charAt(0).toUpperCase() || "?"}
+            <div className="lobby-team">
+              <div className="lobby-team__avatar lobby-team__avatar--opponent">
+                {game.opponentTeam.nom?.charAt(0).toUpperCase() ?? "?"}
               </div>
               <div>
-                <p style={{ margin: 0, fontWeight: "600", fontSize: "18px" }}>
-                  {game.opponentTeam.nom}
-                </p>
-                <p style={{ margin: "4px 0 0", fontSize: "12px", opacity: 0.7 }}>Adversaire</p>
+                <p className="lobby-team__name">{game.opponentTeam.nom}</p>
+                <p className="lobby-team__role">Adversaire</p>
               </div>
             </div>
           ) : (
-            <div style={waitingStyle}>
-              <div style={pulseStyle}></div>
-              <p style={{ opacity: 0.7, marginBottom: "8px" }}>
-                Recherche d'une équipe adverse...
-              </p>
-              <p style={{
-                fontSize: "14px",
-                opacity: 0.5,
-                fontFamily: "monospace"
-              }}>
-                ⏱️ {Math.floor(waitTime / 60)}:{(waitTime % 60).toString().padStart(2, "0")}
-              </p>
+            <div className="lobby-waiting-slot">
+              <div className="lobby-pulse">
+                <IconUsers size={22} />
+              </div>
+              <p className="lobby-waiting-text">Recherche d'un adversaire…</p>
+              <span className="lobby-timer">
+                <IconClock size={13} style={{ verticalAlign: "middle" }} /> {formatTime(waitTime)}
+              </span>
               {waitTime >= TIMEOUT_SECONDS && (
-                <p style={{
-                  color: "#ff9800",
-                  fontSize: "14px",
-                  marginTop: "12px"
-                }}>
-                  La recherche prend plus de temps que prévu...
-                </p>
+                <p className="lobby-timeout-warn">La recherche prend plus de temps que prévu…</p>
               )}
             </div>
           )}
         </div>
 
-        {/* Actions */}
-        {isWaiting && isCreator && (
-          <button
-            style={{
-              ...buttonStyle,
-              background: "linear-gradient(135deg, #757575 0%, #616161 100%)",
-              marginBottom: "12px"
-            }}
-            onClick={handleCancelSearch}
-            disabled={cancelling}
-          >
-            {cancelling ? "Annulation..." : "❌ Annuler la recherche"}
-          </button>
-        )}
-
-        {isMatched && isCreator && (
-          <button
-            style={buttonStyle}
-            onClick={handleStartGame}
-            disabled={starting}
-          >
-            {starting ? "Démarrage..." : "🎮 Démarrer le match !"}
-          </button>
-        )}
-
-        {isMatched && !isCreator && (
-          <div style={{ ...cardStyle, textAlign: "center" }}>
-            <p style={{ margin: 0, opacity: 0.7 }}>
-              En attente que le créateur démarre le match...
-            </p>
+        {/* Game info */}
+        {(game?.sport?.code || game?.pointId) && (
+          <div className="lobby-info-card">
+            {game?.sport?.code && (
+              <div className="lobby-info-item">
+                <span className="lobby-info-label">Sport</span>
+                <span className="lobby-info-value">
+                  <IconTrophy size={16} />
+                  {game.sport.code}
+                </span>
+              </div>
+            )}
+            {game?.pointId && (
+              <div className="lobby-info-item">
+                <span className="lobby-info-label">Arène</span>
+                <span className="lobby-info-value">
+                  <IconMapPin size={16} />
+                  {game.pointId}
+                </span>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Option pour rejoindre si on n'est pas le créateur et qu'il n'y a pas d'adversaire */}
-        {isWaiting && !isCreator && playerTeamId && (
-          <div style={cardStyle}>
-            <h3 style={{ marginTop: 0 }}>Rejoindre ce jeu</h3>
+        {/* Actions */}
+        <div className="lobby-actions">
+          {isWaiting && isCreator && (
             <button
-              style={{ ...buttonStyle, background: "linear-gradient(135deg, #e53935 0%, #c62828 100%)" }}
+              className="lobby-btn lobby-btn--cancel"
+              onClick={handleCancelSearch}
+              disabled={cancelling}
+            >
+              <IconX size={18} />
+              {cancelling ? "Annulation…" : "Annuler la recherche"}
+            </button>
+          )}
+
+          {isMatched && isCreator && (
+            <button
+              className="lobby-btn lobby-btn--start"
+              onClick={handleStartGame}
+              disabled={starting}
+            >
+              <IconPlay size={18} />
+              {starting ? "Démarrage…" : "Lancer le match"}
+            </button>
+          )}
+
+          {isMatched && !isCreator && (
+            <div className="lobby-waiting-hint">
+              En attente que le créateur lance le match…
+            </div>
+          )}
+
+          {isWaiting && !isCreator && !playerTeamId && (
+            <div className="lobby-waiting-hint" style={{ color: "#f87171" }}>
+              Tu dois rejoindre une équipe avant de pouvoir combattre —{" "}
+              <a href="/team" style={{ color: "#f87171", textDecoration: "underline" }}>
+                Rejoindre une équipe
+              </a>
+            </div>
+          )}
+
+          {isWaiting && !isCreator && playerTeamId && (
+            <button
+              className="lobby-btn lobby-btn--join"
               onClick={() => handleJoinGame(parseInt(playerTeamId))}
               disabled={joining}
             >
-              {joining ? "En cours..." : "Rejoindre en tant qu'adversaire"}
+              <IconUsers size={18} />
+              {joining ? "En cours…" : "Rejoindre en tant qu'adversaire"}
             </button>
-          </div>
-        )}
-
-        {/* Info sur la partie */}
-        <div style={{ ...cardStyle, marginTop: "20px" }}>
-          {game?.sport?.code && (
-            <div style={{ marginBottom: "16px" }}>
-              <p style={{ margin: 0, fontSize: "12px", opacity: 0.7 }}>SPORT</p>
-              <p style={{ margin: "8px 0 0", fontWeight: "600", fontSize: "18px" }}>
-                🏆 {game.sport.code}
-              </p>
-            </div>
-          )}
-          {game?.pointId && (
-            <div>
-              <p style={{ margin: 0, fontSize: "12px", opacity: 0.7 }}>ARÈNE</p>
-              <p style={{ margin: "8px 0 0", fontWeight: "600" }}>
-                📍 {game.pointId}
-              </p>
-            </div>
           )}
         </div>
-      </main>
 
-      <style>{`
-        @keyframes pulse {
-          0% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.5; transform: scale(1.1); }
-          100% { opacity: 1; transform: scale(1); }
-        }
-      `}</style>
+      </main>
     </div>
   );
 }

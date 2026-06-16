@@ -54,4 +54,10 @@ public class AreneService {
         }
         return false;
     }
+
+    public long deleteAll() {
+        long count = areneRepository.count();
+        areneRepository.deleteAll();
+        return count;
+    }
 }

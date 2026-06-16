@@ -1,4 +1,6 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
+import { Toaster } from "sonner";
 import { useAuth } from "./context/AuthContext.jsx";
 
 import HomePage from "./pages/HomePage.jsx";
@@ -18,19 +20,33 @@ import ProgressionPage from "./pages/ProgressionPage.jsx";
 
 import GuardedRoute from "./components/GuardedRoute.jsx";
 import Header from "./components/Header.jsx";
+import PageTransition from "./components/PageTransition.jsx";
 
 function App() {
   const { user } = useAuth();
+  const location = useLocation();
 
   return (
     <>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: "#1e1e2e",
+            border: "1px solid rgba(255,255,255,0.1)",
+            color: "#f1f5f9",
+            fontFamily: "var(--font-sans)",
+          },
+        }}
+      />
       {/* On n’affiche le Header que si l’utilisateur est connecté */}
       {user && <Header />}
 
-      <Routes>
+      <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
         {/* Routes publiques */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />
+        <Route path="/register" element={<PageTransition><RegisterPage /></PageTransition>} />
 
         {/* Menu principal */}
         <Route
@@ -152,6 +168,7 @@ function App() {
           }
         />
       </Routes>
+      </AnimatePresence>
     </>
   );
 }

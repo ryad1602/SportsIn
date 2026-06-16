@@ -1,35 +1,37 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
 import { sessionAPI, gameAPI } from "../api/api.js";
+import Header from "../components/Header.jsx";
+import { cardVariants } from "../components/PageTransition.jsx";
+import { IconAlertTriangle, IconCheck, IconX, IconSword } from "../components/Icons.jsx";
+import "../styles/active-session.css";
 
 function ActiveSessionPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const gameId = searchParams.get("gameId");
 
-  const [session, setSession] = useState(null);
-  const [game, setGame] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [session, setSession]       = useState(null);
+  const [game, setGame]             = useState(null);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState(null);
   const [terminating, setTerminating] = useState(false);
-
-  // Score form
   const [showScoreForm, setShowScoreForm] = useState(false);
-  const [scoreA, setScoreA] = useState(0);
-  const [scoreB, setScoreB] = useState(0);
-
-  // Chronomètre + polling
+  const [scoreA, setScoreA]         = useState(0);
+  const [scoreB, setScoreB]         = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
+
   const timerRef = useRef(null);
-  const pollRef = useRef(null);
+  const pollRef  = useRef(null);
 
   useEffect(() => {
     loadData();
-    // Polling toutes les 3s pour détecter si l'autre joueur a terminé le match
     pollRef.current = setInterval(checkGameState, 3000);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
-      if (pollRef.current) clearInterval(pollRef.current);
+      if (pollRef.current)  clearInterval(pollRef.current);
     };
   }, [gameId]);
 
@@ -48,16 +50,13 @@ function ActiveSessionPage() {
     try {
       setLoading(true);
       setError(null);
-
       if (gameId) {
         const gameData = await gameAPI.getById(gameId);
         setGame(gameData);
-
         if (gameData.state === "COMPLETED" && gameData.sessionId) {
           navigate(`/game/result/${gameData.sessionId}`);
           return;
         }
-
         if (gameData.sessionId) {
           const sessionData = await sessionAPI.getById(gameData.sessionId);
           setSession(sessionData);
@@ -86,27 +85,23 @@ function ActiveSessionPage() {
     }, 1000);
   };
 
-  const formatTime = (seconds) => {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    if (hrs > 0) {
-      return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-    }
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  const formatTime = (s) => {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+    return `${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
   };
 
   const handleTerminateWithScores = async () => {
     if (!session) return;
-
+    setTerminating(true);
+    setError(null);
+    const tid = toast.loading("Enregistrement du score…");
     try {
-      setTerminating(true);
-      setError(null);
-
       const teamAId = game?.creatorTeam?.id?.toString();
       const teamBId = game?.opponentTeam?.id?.toString();
 
-      // 1. Mettre à jour la session avec les métriques de score
       const updatedSession = {
         ...session,
         result: {
@@ -117,12 +112,8 @@ function ActiveSessionPage() {
         },
       };
       await sessionAPI.update(session.id, updatedSession);
-
-      // 2. Terminer la session (backend détermine le gagnant via les métriques)
       await sessionAPI.terminate(session.id);
 
-      // 3. Toujours marquer le jeu comme complété (même en cas d'égalité)
-      // pour que l'autre joueur soit redirigé via le polling
       if (gameId && game) {
         let winnerId = null;
         if (Number(scoreA) > Number(scoreB)) winnerId = teamAId;
@@ -131,8 +122,10 @@ function ActiveSessionPage() {
       }
 
       if (pollRef.current) clearInterval(pollRef.current);
+      toast.success("Match terminé !", { id: tid });
       navigate(`/game/result/${session.id}`);
     } catch (err) {
+      toast.error("Erreur lors de la terminaison", { id: tid });
       setError("Erreur lors de la terminaison de la session");
       console.error(err);
     } finally {
@@ -140,29 +133,42 @@ function ActiveSessionPage() {
     }
   };
 
-  // Styles
-  const containerStyle = { width: "100vw", minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#111", color: "white" };
-  const mainStyle = { padding: "32px", maxWidth: "600px", margin: "0 auto", width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "calc(100vh - 64px)" };
-  const timerStyle = { fontSize: "72px", fontWeight: "bold", fontFamily: "monospace", marginBottom: "24px", color: "#4caf50", textShadow: "0 0 20px rgba(76, 175, 80, 0.5)" };
-  const cardStyle = { background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)", borderRadius: "16px", padding: "24px", marginBottom: "20px", border: "1px solid #333", width: "100%", textAlign: "center" };
-  const buttonStyle = { width: "100%", padding: "20px 24px", borderRadius: "12px", border: "none", cursor: "pointer", fontSize: "18px", fontWeight: "600", color: "white", transition: "all 0.2s", marginTop: "12px" };
-  const inputStyle = { width: "80px", padding: "12px", fontSize: "32px", fontWeight: "bold", textAlign: "center", background: "#0d0d1a", border: "2px solid #444", borderRadius: "10px", color: "white", outline: "none" };
-  const statusBadgeStyle = { display: "inline-block", padding: "8px 20px", borderRadius: "20px", fontSize: "14px", fontWeight: "600", background: "#4caf50", color: "white", marginBottom: "24px" };
+  const getScorePreview = () => {
+    const a = Number(scoreA), b = Number(scoreB);
+    const nameA = game?.creatorTeam?.nom || "Équipe A";
+    const nameB = game?.opponentTeam?.nom || "Équipe B";
+    if (a > b) return `Victoire de ${nameA}`;
+    if (b > a) return `Victoire de ${nameB}`;
+    return "Match nul";
+  };
 
   if (loading) {
-    return <div style={containerStyle}><main style={mainStyle}><p style={{ opacity: 0.7 }}>Chargement...</p></main></div>;
+    return (
+      <div className="session-container">
+        <Header />
+        <main className="session-main">
+          <div className="session-loading">
+            <div className="spinner" />
+            Chargement de la session…
+          </div>
+        </main>
+      </div>
+    );
   }
 
   if (!session) {
     return (
-      <div style={containerStyle}>
-        <main style={mainStyle}>
-          <div style={cardStyle}>
-            <h2>Aucune session active</h2>
-            <p style={{ opacity: 0.7 }}>Créez un jeu pour démarrer une session.</p>
-            <button style={{ ...buttonStyle, background: "linear-gradient(135deg, #1e88e5 0%, #1565c0 100%)" }} onClick={() => navigate("/game/create")}>
-              Créer un jeu
-            </button>
+      <div className="session-container">
+        <Header />
+        <main className="session-main">
+          <div className="session-card" style={{ textAlign: "center" }}>
+            <div className="session-empty">
+              <h2>Aucune session active</h2>
+              <p>Créez un jeu pour démarrer une session.</p>
+              <button className="session-btn session-btn--end" style={{ width: "auto", padding: "13px 28px" }} onClick={() => navigate("/game/create")}>
+                <IconSword size={18} /> Créer un jeu
+              </button>
+            </div>
           </div>
         </main>
       </div>
@@ -170,90 +176,118 @@ function ActiveSessionPage() {
   }
 
   return (
-    <div style={containerStyle}>
-      <main style={mainStyle}>
-        <span style={statusBadgeStyle}>EN COURS</span>
+    <div className="session-container">
+      <Header />
+      <main className="session-main">
 
-        <div style={timerStyle}>{formatTime(elapsedTime)}</div>
+        {/* Status */}
+        <motion.div className="session-status"
+          variants={cardVariants} initial="hidden" animate="visible" custom={0}>
+          <span className="session-status__dot" />
+          En cours
+        </motion.div>
+
+        {/* Chronomètre */}
+        <motion.div className="session-timer"
+          variants={cardVariants} initial="hidden" animate="visible" custom={1}>
+          {formatTime(elapsedTime)}
+        </motion.div>
 
         {/* Équipes */}
         {game && (
-          <div style={cardStyle}>
-            <div style={{ display: "flex", justifyContent: "space-around", alignItems: "center" }}>
-              <div>
-                <p style={{ margin: 0, fontSize: "12px", opacity: 0.7 }}>ÉQUIPE 1</p>
-                <p style={{ margin: "8px 0 0", fontWeight: "600", fontSize: "18px" }}>{game.creatorTeam?.nom || "Équipe A"}</p>
+          <motion.div className="session-card"
+            variants={cardVariants} initial="hidden" animate="visible" custom={2}>
+            <div className="session-teams">
+              <div className="session-team">
+                <div className="session-team__avatar session-team__avatar--a">
+                  {game.creatorTeam?.nom?.charAt(0).toUpperCase() || "A"}
+                </div>
+                <p className="session-team__label">Équipe 1</p>
+                <p className="session-team__name">{game.creatorTeam?.nom || "Équipe A"}</p>
               </div>
-              <div style={{ fontSize: "24px", fontWeight: "bold", color: "#ff9800" }}>VS</div>
-              <div>
-                <p style={{ margin: 0, fontSize: "12px", opacity: 0.7 }}>ÉQUIPE 2</p>
-                <p style={{ margin: "8px 0 0", fontWeight: "600", fontSize: "18px" }}>{game.opponentTeam?.nom || "Équipe B"}</p>
+              <span className="session-vs">VS</span>
+              <div className="session-team">
+                <div className="session-team__avatar session-team__avatar--b">
+                  {game.opponentTeam?.nom?.charAt(0).toUpperCase() || "B"}
+                </div>
+                <p className="session-team__label">Équipe 2</p>
+                <p className="session-team__name">{game.opponentTeam?.nom || "Équipe B"}</p>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* Formulaire de score */}
+        {/* Formulaire score */}
         {showScoreForm && (
-          <div style={{ ...cardStyle, border: "1px solid #ff9800" }}>
-            <h3 style={{ marginTop: 0, marginBottom: 20, color: "#ff9800" }}>Saisir le score final</h3>
+          <motion.div className="session-card session-card--score"
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}>
+            <p className="score-form-title">Score final</p>
 
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "24px" }}>
-              {/* Score équipe A */}
-              <div style={{ textAlign: "center" }}>
-                <p style={{ margin: "0 0 8px", fontSize: "13px", opacity: 0.7, fontWeight: 600 }}>{game?.creatorTeam?.nom || "Équipe A"}</p>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <button onClick={() => setScoreA(Math.max(0, Number(scoreA) - 1))} style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid #555", background: "#222", color: "white", cursor: "pointer", fontSize: "18px" }}>−</button>
-                  <input type="number" min="0" value={scoreA} onChange={(e) => setScoreA(Math.max(0, Number(e.target.value)))} style={inputStyle} />
-                  <button onClick={() => setScoreA(Number(scoreA) + 1)} style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid #555", background: "#222", color: "white", cursor: "pointer", fontSize: "18px" }}>+</button>
+            <div className="score-form-teams">
+              <div className="score-team">
+                <p className="score-team__name">{game?.creatorTeam?.nom || "Équipe A"}</p>
+                <div className="score-controls">
+                  <button className="score-btn" onClick={() => setScoreA(Math.max(0, Number(scoreA) - 1))}>−</button>
+                  <input
+                    className="score-input"
+                    type="number" min="0"
+                    value={scoreA}
+                    onChange={(e) => setScoreA(Math.max(0, Number(e.target.value)))}
+                  />
+                  <button className="score-btn" onClick={() => setScoreA(Number(scoreA) + 1)}>+</button>
                 </div>
               </div>
 
-              <div style={{ fontSize: "28px", fontWeight: "bold", color: "#555", paddingTop: "24px" }}>:</div>
+              <span className="score-separator">:</span>
 
-              {/* Score équipe B */}
-              <div style={{ textAlign: "center" }}>
-                <p style={{ margin: "0 0 8px", fontSize: "13px", opacity: 0.7, fontWeight: 600 }}>{game?.opponentTeam?.nom || "Équipe B"}</p>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <button onClick={() => setScoreB(Math.max(0, Number(scoreB) - 1))} style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid #555", background: "#222", color: "white", cursor: "pointer", fontSize: "18px" }}>−</button>
-                  <input type="number" min="0" value={scoreB} onChange={(e) => setScoreB(Math.max(0, Number(e.target.value)))} style={inputStyle} />
-                  <button onClick={() => setScoreB(Number(scoreB) + 1)} style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid #555", background: "#222", color: "white", cursor: "pointer", fontSize: "18px" }}>+</button>
+              <div className="score-team">
+                <p className="score-team__name">{game?.opponentTeam?.nom || "Équipe B"}</p>
+                <div className="score-controls">
+                  <button className="score-btn" onClick={() => setScoreB(Math.max(0, Number(scoreB) - 1))}>−</button>
+                  <input
+                    className="score-input"
+                    type="number" min="0"
+                    value={scoreB}
+                    onChange={(e) => setScoreB(Math.max(0, Number(e.target.value)))}
+                  />
+                  <button className="score-btn" onClick={() => setScoreB(Number(scoreB) + 1)}>+</button>
                 </div>
               </div>
             </div>
 
-            {/* Résumé */}
-            <p style={{ margin: "20px 0 0", fontSize: "14px", opacity: 0.7 }}>
-              {Number(scoreA) > Number(scoreB)
-                ? `🏆 Victoire : ${game?.creatorTeam?.nom || "Équipe A"}`
-                : Number(scoreB) > Number(scoreA)
-                ? `🏆 Victoire : ${game?.opponentTeam?.nom || "Équipe B"}`
-                : "🤝 Match nul"}
-            </p>
+            <div className="score-preview">
+              <strong>{getScorePreview()}</strong>
+            </div>
 
-            <div style={{ display: "flex", gap: "12px", marginTop: "20px" }}>
-              <button style={{ ...buttonStyle, flex: 1, background: "linear-gradient(135deg, #4caf50 0%, #388e3c 100%)" }} onClick={handleTerminateWithScores} disabled={terminating}>
-                {terminating ? "Enregistrement..." : "✅ Confirmer le score"}
+            <div className="score-actions">
+              <button className="session-btn session-btn--confirm" onClick={handleTerminateWithScores} disabled={terminating}>
+                <IconCheck size={18} />
+                {terminating ? "Enregistrement…" : "Confirmer le score"}
               </button>
-              <button style={{ ...buttonStyle, flex: "none", width: "auto", padding: "20px 20px", background: "#333", fontSize: "14px" }} onClick={() => setShowScoreForm(false)} disabled={terminating}>
-                Annuler
+              <button className="session-btn session-btn--cancel" onClick={() => setShowScoreForm(false)} disabled={terminating}>
+                <IconX size={16} />
               </button>
             </div>
-          </div>
+          </motion.div>
         )}
 
+        {/* Error */}
         {error && (
-          <div style={{ ...cardStyle, borderColor: "#e53935" }}>
-            <p style={{ color: "#e53935", margin: 0 }}>{error}</p>
+          <div className="session-error">
+            <IconAlertTriangle size={16} /> {error}
           </div>
         )}
 
         {/* Bouton terminer */}
         {!showScoreForm && (
-          <button style={{ ...buttonStyle, background: "linear-gradient(135deg, #e53935 0%, #c62828 100%)" }} onClick={() => setShowScoreForm(true)}>
-            🏁 Terminer la session
-          </button>
+          <motion.button className="session-btn session-btn--end"
+            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+            onClick={() => setShowScoreForm(true)}>
+            Terminer la session
+          </motion.button>
         )}
+
       </main>
     </div>
   );

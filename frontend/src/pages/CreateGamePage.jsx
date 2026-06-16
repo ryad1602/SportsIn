@@ -86,9 +86,14 @@ function CreateGamePage() {
 
       if (compatibleGame) {
         // 2. Rejoindre le game existant automatiquement
-        await gameAPI.join(compatibleGame.id, playerTeam.id);
-        navigate(`/game/lobby/${compatibleGame.id}`);
-        return;
+        try {
+          await gameAPI.join(compatibleGame.id, playerTeam.id);
+          navigate(`/game/lobby/${compatibleGame.id}`);
+          return;
+        } catch (joinErr) {
+          // L'auto-join a raté (ex : jeu déjà pris entre-temps) → créer un nouveau
+          console.warn("Auto-join raté, création d'un nouveau jeu:", joinErr);
+        }
       }
 
       // 3. Sinon créer un nouveau game et attendre

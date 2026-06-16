@@ -1,17 +1,27 @@
 package org.SportsIn.services;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import org.SportsIn.model.Arene;
+import org.SportsIn.model.territory.InMemoryRouteRepository;
+import org.SportsIn.model.territory.InMemoryZoneRepository;
+import org.SportsIn.model.territory.Route;
+import org.SportsIn.model.territory.RouteRepository;
+import org.SportsIn.model.territory.Zone;
+import org.SportsIn.model.territory.ZoneRepository;
 import org.SportsIn.model.user.Equipe;
-import org.SportsIn.model.territory.*;
 import org.SportsIn.repository.AreneRepository;
 import org.SportsIn.repository.EquipeRepository;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import java.util.*;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class TerritoryServiceTest {
 
@@ -35,7 +45,7 @@ class TerritoryServiceTest {
         routeRepository = new InMemoryRouteRepository();
         InfluenceCalculator influenceCalculator = new InfluenceCalculator(
                 List.of(new RouteInfluenceModifier(routeRepository)));
-        territoryService = new TerritoryService(areneRepository, equipeRepository, zoneRepository, routeRepository, influenceCalculator);
+        territoryService = new TerritoryService(areneRepository, equipeRepository, zoneRepository, routeRepository, influenceCalculator, null);
 
         // Création des équipes
         team10 = new Equipe("Équipe 10");

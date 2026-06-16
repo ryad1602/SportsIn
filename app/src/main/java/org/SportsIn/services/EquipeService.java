@@ -38,6 +38,8 @@ public class EquipeService {
             if (equipeDetails.getCouleur() != null) {
                 equipe.setCouleur(equipeDetails.getCouleur());
             }
+            // [F7.1] Mise à jour de l'affinité de terrain (peut être null pour la retirer)
+            equipe.setAffinityType(equipeDetails.getAffinityType());
             return equipeRepository.save(equipe);
         });
     }
@@ -75,5 +77,15 @@ public class EquipeService {
             }
             return true;
         }).orElse(false);
+    }
+
+    /**
+     * [F7.1] Met à jour l'affinité de terrain de l'équipe.
+     */
+    public Optional<Equipe> updateAffinity(Long id, String affinityType) {
+        return equipeRepository.findById(id).map(equipe -> {
+            equipe.setAffinityType(affinityType);
+            return equipeRepository.save(equipe);
+        });
     }
 }

@@ -1,18 +1,39 @@
 package org.SportsIn.services;
 
-import org.SportsIn.model.*;
-import org.SportsIn.model.territory.*;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.SportsIn.model.Arene;
+import org.SportsIn.model.InMemoryRuleRepository;
+import org.SportsIn.model.InMemorySessionRepository;
+import org.SportsIn.model.MetricType;
+import org.SportsIn.model.MetricValue;
+import org.SportsIn.model.Participant;
+import org.SportsIn.model.ParticipantType;
+import org.SportsIn.model.Session;
+import org.SportsIn.model.SessionRepository;
+import org.SportsIn.model.SessionState;
+import org.SportsIn.model.Sport;
+import org.SportsIn.model.territory.InMemoryRouteRepository;
+import org.SportsIn.model.territory.InMemoryZoneRepository;
+import org.SportsIn.model.territory.RouteRepository;
+import org.SportsIn.model.territory.Zone;
+import org.SportsIn.model.territory.ZoneRepository;
 import org.SportsIn.model.user.Equipe;
 import org.SportsIn.repository.AreneRepository;
 import org.SportsIn.repository.EquipeRepository;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import java.time.LocalDateTime;
-import java.util.*;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class SessionServiceTest {
 
@@ -41,10 +62,10 @@ class SessionServiceTest {
 
         InfluenceCalculator influenceCalculator = new InfluenceCalculator(
                 List.of(new RouteInfluenceModifier(routeRepository)));
-        territoryService = new TerritoryService(areneRepository, equipeRepository, zoneRepository, routeRepository, influenceCalculator);
+        territoryService = new TerritoryService(areneRepository, equipeRepository, zoneRepository, routeRepository, influenceCalculator, null);
         XpGrantService xpGrantService = new XpGrantService(null, null, null);
         RuleEvaluationService ruleEvaluationService = new RuleEvaluationService(new InMemoryRuleRepository());
-        sessionService = new SessionService(sessionRepository, territoryService, xpGrantService, ruleEvaluationService);
+        sessionService = new SessionService(sessionRepository, territoryService, xpGrantService, ruleEvaluationService, null);
 
         // Données de test
         football = new Sport(1L, "FOOT", "Football", 101L, null);

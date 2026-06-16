@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
-import { equipeAPI, joueurAPI, areneAPI, progressionAPI, messageAPI } from "../api/api.js";
+import { equipeAPI, joueurAPI, areneAPI, progressionAPI, messageAPI, contextAPI } from "../api/api.js";
 import Header from "../components/Header.jsx";
+import { DnaIcon, IconCrown } from "../components/Icons.jsx";
+import { SkeletonCard, SkeletonStats } from "../components/Skeleton.jsx";
+import ErrorBanner from "../components/ErrorBanner.jsx";
 import "../styles/team.css";
 
 function TeamPage() {
@@ -24,12 +27,32 @@ function TeamPage() {
   const [creating, setCreating] = useState(false);
   const [joiningTeam, setJoiningTeam] = useState(null);
 
+  // [F7.1] Affinity state
+  const [savingAffinity, setSavingAffinity] = useState(false);
+
+  // [F10] Terrain Mastery state
+  const [terrainMastery, setTerrainMastery] = useState(null);
+  const masteryPollRef = useRef(null);
+
+  // Aura state
+  const [teamAura, setTeamAura] = useState(null);
+
+  const AFFINITY_TYPES = [
+    { value: 'ABYSSE', label: 'Abysse', color: '#38bdf8', desc: 'Eau, lacs, canaux',        opposite: 'NEXUS'  },
+    { value: 'OLYMPE', label: 'Olympe', color: '#fbbf24', desc: 'Stades, monuments',        opposite: 'EDEN'   },
+    { value: 'EDEN',   label: 'Eden',   color: '#4ade80', desc: 'Parcs, forêts',            opposite: 'OLYMPE' },
+    { value: 'NEXUS',  label: 'Nexus',  color: '#f87171', desc: 'Gares, zones urbaines',    opposite: 'ABYSSE' },
+  ];
+
+  const DNA_COLORS = { ABYSSE: '#38bdf8', OLYMPE: '#fbbf24', EDEN: '#4ade80', NEXUS: '#f87171' };
+
   // Chat state
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
   const chatEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
   const chatPollRef = useRef(null);
 
   const TEAM_COLORS = [
@@ -72,6 +95,13 @@ function TeamPage() {
           } catch (e) {
             console.warn('Progression non disponible:', e);
           }
+
+          try {
+            const aura = await contextAPI.getTeamAura(savedTeamId);
+            setTeamAura(aura);
+          } catch (e) {
+            console.warn('Aura non disponible:', e);
+          }
         } catch (e) {
           sessionStorage.removeItem("insport_team_id");
           setAvailableTeams(teams);
@@ -87,13 +117,23 @@ function TeamPage() {
     }
   };
 
+  const persistTeamId = (teamId) => {
+    sessionStorage.setItem("insport_team_id", teamId);
+    // Met aussi à jour insport_user en localStorage pour survivre au refresh
+    const stored = localStorage.getItem("insport_user");
+    if (stored) {
+      const u = JSON.parse(stored);
+      localStorage.setItem("insport_user", JSON.stringify({ ...u, equipeId: teamId }));
+    }
+  };
+
   const handleJoinTeam = async (teamId) => {
     try {
       setJoiningTeam(teamId);
       if (user?.id) {
         await equipeAPI.join(teamId, user.id);
       }
-      sessionStorage.setItem("insport_team_id", teamId);
+      persistTeamId(teamId);
       await loadData();
     } catch (err) {
       setError("Erreur lors de la jonction à l'équipe");
@@ -119,7 +159,7 @@ function TeamPage() {
         await equipeAPI.join(newTeam.id, user.id);
       }
 
-      sessionStorage.setItem("insport_team_id", newTeam.id);
+      persistTeamId(newTeam.id);
       setNewTeamName("");
       setShowCreateForm(false);
       await loadData();
@@ -140,10 +180,31 @@ function TeamPage() {
       console.error("Erreur lors du départ de l'équipe", err);
     }
     sessionStorage.removeItem("insport_team_id");
+    const stored = localStorage.getItem("insport_user");
+    if (stored) {
+      const u = JSON.parse(stored);
+      localStorage.setItem("insport_user", JSON.stringify({ ...u, equipeId: null }));
+    }
     setPlayerTeam(null);
     setTeamMembers([]);
     setControlledArenas([]);
     loadData();
+  };
+
+  // [F7.1] Met à jour l'affinité de terrain
+  const handleAffinityChange = async (affinityType) => {
+    if (!playerTeam) return;
+    const newAffinity = playerTeam.affinityType === affinityType ? null : affinityType;
+    try {
+      setSavingAffinity(true);
+      const updated = await equipeAPI.updateAffinity(playerTeam.id, newAffinity);
+      setPlayerTeam(updated);
+    } catch (err) {
+      console.error("Erreur mise à jour affinité:", err);
+      setError("Erreur lors de la mise à jour de l'affinité");
+    } finally {
+      setSavingAffinity(false);
+    }
   };
 
   // --- Chat functions ---
@@ -157,7 +218,9 @@ function TeamPage() {
   }, []);
 
   const scrollToBottom = () => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   };
 
   useEffect(() => {
@@ -219,15 +282,33 @@ function TeamPage() {
     }
   }, [contextMenu]);
 
+  // [F10] Poll Terrain Mastery status every 5 seconds
+  useEffect(() => {
+    if (!playerTeam) return;
+
+    const pollMastery = async () => {
+      try {
+        const mastery = await equipeAPI.getTerrainMastery(playerTeam.id);
+        setTerrainMastery(mastery);
+      } catch (err) {
+        console.warn('Erreur fetch terrain mastery:', err);
+      }
+    };
+
+    pollMastery(); // Call immediately
+    masteryPollRef.current = setInterval(pollMastery, 5000);
+
+    return () => clearInterval(masteryPollRef.current);
+  }, [playerTeam]);
+
   if (loading) {
     return (
       <div className="team-page">
         <Header />
         <main className="team-content">
-          <div className="team-loading">
-            <div className="spinner" />
-            <p>Chargement...</p>
-          </div>
+          <SkeletonStats count={4} />
+          <SkeletonCard lines={2} showAvatar />
+          <SkeletonCard lines={3} />
         </main>
       </div>
     );
@@ -249,11 +330,7 @@ function TeamPage() {
         </div>
 
         {error && (
-          <div className="team-error animate-slideDown">
-            <span>⚠️</span>
-            <p>{error}</p>
-            <button onClick={() => setError(null)}>×</button>
-          </div>
+          <ErrorBanner message={error} onDismiss={() => setError(null)} />
         )}
 
         {playerTeam ? (
@@ -295,6 +372,150 @@ function TeamPage() {
               </div>
             </div>
 
+            {/* [F7.1] Affinité de terrain */}
+            <div className="team-card">
+              <div className="team-card__header">
+                <h3>Affinité de terrain</h3>
+                {playerTeam.affinityType && (
+                  <span className="badge badge-primary" style={{ color: DNA_COLORS[playerTeam.affinityType] }}>
+                    <DnaIcon type={playerTeam.affinityType} size={14} />{' '}
+                    {playerTeam.affinityType}
+                  </span>
+                )}
+              </div>
+              <p className="team-affinity-hint">
+                Choisissez un terrain de prédilection.
+                <span className="hint-bonus"> +10% </span>sur ce terrain,
+                <span className="hint-malus"> -10% </span>sur le terrain opposé.
+              </p>
+              <div className="team-affinity-picker">
+                {AFFINITY_TYPES.map((aff) => {
+                  const isActive   = playerTeam.affinityType === aff.value;
+                  const isOpposite = playerTeam.affinityType
+                    ? AFFINITY_TYPES.find(a => a.value === playerTeam.affinityType)?.opposite === aff.value
+                    : false;
+                  return (
+                    <button
+                      key={aff.value}
+                      type="button"
+                      className={`team-affinity-option ${isActive ? 'active' : ''} ${isOpposite ? 'opposed' : ''}`}
+                      style={{ '--affinity-color': aff.color }}
+                      onClick={() => handleAffinityChange(aff.value)}
+                      disabled={savingAffinity}
+                      title={`${aff.label} — ${aff.desc}`}
+                    >
+                      <span className="team-affinity-option__icon"><DnaIcon type={aff.value} size={20} /></span>
+                      <span className="team-affinity-option__label">{aff.label}</span>
+                      <span className="team-affinity-option__desc">{aff.desc}</span>
+                      {isActive   && <span className="team-affinity-option__tag bonus">+10%</span>}
+                      {isOpposite && <span className="team-affinity-option__tag malus">-10%</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              {playerTeam.affinityType && (
+                <p className="team-affinity-remove-hint">Cliquez à nouveau pour retirer l'affinité</p>
+              )}
+            </div>
+
+            {/* Aura d'équipe */}
+            <div className="team-card team-aura-card">
+              <div className="team-card__header">
+                <h3>Aura d'équipe</h3>
+                {teamAura?.currentAura && (
+                  <span className="team-aura-active-badge" style={{ '--ac': DNA_COLORS[teamAura.currentAura] }}>
+                    <DnaIcon type={teamAura.currentAura} size={16} /> {teamAura.currentAura} — Active
+                  </span>
+                )}
+              </div>
+
+              {!teamAura ? (
+                <p style={{ color: 'var(--gray-500)', textAlign: 'center', padding: '12px 0' }}>Chargement…</p>
+              ) : teamAura.currentAura ? (
+                /* ── Aura active ─────────────────── */
+                <div>
+                  <div className="team-aura-banner" style={{ '--ac': DNA_COLORS[teamAura.currentAura] }}>
+                    <span className="team-aura-banner__icon"><DnaIcon type={teamAura.currentAura} size={28} /></span>
+                    <div>
+                      <strong>Aura {teamAura.currentAura} activée</strong>
+                      <p>+10% d'influence sur toutes les arènes {teamAura.currentAura}</p>
+                    </div>
+                  </div>
+                  {teamAura.auraProgress?.typeBreakdown && (
+                    <div className="team-aura-breakdown">
+                      {Object.entries(teamAura.auraProgress.typeBreakdown).map(([type, count]) => (
+                        <div key={type} className="team-aura-type-row">
+                          <span style={{ color: DNA_COLORS[type] || '#94a3b8' }}><DnaIcon type={type} size={16} /> {type}</span>
+                          <div className="team-aura-type-bar">
+                            <div
+                              className="team-aura-type-bar-fill"
+                              style={{
+                                width: `${Math.min(100, (count / 7) * 100)}%`,
+                                background: DNA_COLORS[type] || '#6b7280',
+                              }}
+                            />
+                          </div>
+                          <span className="team-aura-type-count">{count}/7</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* ── Aura en construction ─────────── */
+                <div>
+                  <p className="team-aura-info">
+                    Capturez <strong>7 arènes</strong> du même type parmi vos 10 dernières captures pour activer une Aura.
+                  </p>
+                  {teamAura.auraProgress?.dominantType ? (
+                    <div className="team-aura-progress">
+                      <div className="team-aura-progress-header">
+                        <span style={{ color: DNA_COLORS[teamAura.auraProgress.dominantType] }}>
+                          <DnaIcon type={teamAura.auraProgress.dominantType} size={16} /> {teamAura.auraProgress.dominantType}
+                        </span>
+                        <span className="team-aura-progress-count">
+                          {teamAura.auraProgress.dominantCount}/{teamAura.auraProgress.threshold}
+                        </span>
+                      </div>
+                      <div className="team-aura-bar">
+                        <div
+                          className="team-aura-bar-fill"
+                          style={{
+                            width: `${teamAura.auraProgress.progressPercent}%`,
+                            background: DNA_COLORS[teamAura.auraProgress.dominantType] || '#6b7280',
+                          }}
+                        />
+                      </div>
+                      <p className="team-aura-needed">
+                        Encore <strong>{teamAura.auraProgress.neededForAura}</strong> capture{teamAura.auraProgress.neededForAura > 1 ? 's' : ''} pour l'Aura
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="team-aura-empty">Aucune capture enregistrée pour le moment.</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* [F10] Terrain Mastery Badge */}
+            {terrainMastery?.active && (
+              <div className="team-mastery-badge">
+                <div className="mastery-header">
+                  <span className="crown-icon"><IconCrown size={20} /></span>
+                  <h3>Terrain Master</h3>
+                  <span className="countdown">{terrainMastery.remainingMinutes} min</span>
+                </div>
+                <p className="mastery-type">{terrainMastery.type}</p>
+                <div className="mastery-bonuses">
+                  <span className="bonus-item">+{terrainMastery.bonusInfluencePercent}% Influence</span>
+                  <span className="bonus-item">-{Math.round(terrainMastery.missionCooldownReduction * 100)}% Cooldown</span>
+                </div>
+                <div className="mastery-progress-bar">
+                  <div className="progress-fill" style={{width: `${(terrainMastery.remainingMinutes / 360) * 100}%`}}></div>
+                </div>
+              </div>
+            )}
+
             {/* Membres */}
             <div className="team-card">
               <div className="team-card__header">
@@ -330,17 +551,30 @@ function TeamPage() {
                 </div>
 
                 <ul className="team-arenas-list">
-                  {controlledArenas.map((arena) => (
-                    <li key={arena.id} className="team-arena">
-                      <div className="team-arena__icon">📍</div>
-                      <div className="team-arena__info">
-                        <span className="team-arena__name">{arena.nom || `Arène ${arena.id}`}</span>
-                        <span className="team-arena__sports">
-                          {arena.sportsDisponibles?.join(", ") || "Multi-sports"}
-                        </span>
-                      </div>
-                    </li>
-                  ))}
+                  {controlledArenas.map((arena) => {
+                    const dnaColor = DNA_COLORS[arena.dnaType];
+                    return (
+                      <li key={arena.id} className="team-arena">
+                        <div
+                          className="team-arena__icon"
+                          style={dnaColor ? { background: `${dnaColor}20`, color: dnaColor } : {}}
+                        >
+                          <DnaIcon type={arena.dnaType || 'NEUTRE'} size={20} />
+                        </div>
+                        <div className="team-arena__info">
+                          <span className="team-arena__name">{arena.nom || `Arène ${arena.id}`}</span>
+                          <span className="team-arena__sports">
+                            {arena.dnaType && arena.dnaType !== 'NEUTRE' && (
+                              <span style={{ color: dnaColor, marginRight: 6, fontWeight: 600, fontSize: '0.75rem' }}>
+                                {arena.dnaType}
+                              </span>
+                            )}
+                            {arena.sportsDisponibles?.join(', ') || 'Multi-sports'}
+                          </span>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}
@@ -392,7 +626,7 @@ function TeamPage() {
                   <span className="badge badge-primary">{chatMessages.length}</span>
                 </div>
 
-                <div className="team-chat-messages">
+                <div className="team-chat-messages" ref={chatContainerRef}>
                   {chatMessages.length === 0 ? (
                     <div className="team-chat-empty">
                       <span>🗨️</span>

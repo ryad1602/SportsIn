@@ -1,16 +1,16 @@
 package org.SportsIn.services;
 
+import java.util.List;
+
 import org.SportsIn.model.Arene;
-import org.SportsIn.model.territory.Zone;
-import org.SportsIn.model.territory.ZoneRepository;
 import org.SportsIn.model.territory.Route;
 import org.SportsIn.model.territory.RouteBonus;
 import org.SportsIn.model.territory.RouteRepository;
+import org.SportsIn.model.territory.Zone;
+import org.SportsIn.model.territory.ZoneRepository;
 import org.SportsIn.repository.AreneRepository;
 import org.SportsIn.repository.EquipeRepository;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 /**
  * Service responsable de la logique de conquête de territoire (Arènes et Zones).
@@ -25,19 +25,22 @@ public class TerritoryService {
     private final RouteService routeService;
     private final RouteGeneratorService routeGeneratorService;
     private final InfluenceCalculator influenceCalculator;
+    private final ContextService contextService;
 
     public TerritoryService(AreneRepository areneRepository,
                             EquipeRepository equipeRepository,
                             ZoneRepository zoneRepository,
                             RouteRepository routeRepository,
-                            InfluenceCalculator influenceCalculator) {
-        this.areneRepository = areneRepository;
-        this.equipeRepository = equipeRepository;
-        this.zoneRepository = zoneRepository;
-        this.routeRepository = routeRepository;
-        this.routeService = new RouteService();
+                            InfluenceCalculator influenceCalculator,
+                            ContextService contextService) {
+        this.areneRepository    = areneRepository;
+        this.equipeRepository   = equipeRepository;
+        this.zoneRepository     = zoneRepository;
+        this.routeRepository    = routeRepository;
+        this.routeService       = new RouteService();
         this.routeGeneratorService = new RouteGeneratorService();
         this.influenceCalculator = influenceCalculator;
+        this.contextService     = contextService;
     }
 
     /**
@@ -98,6 +101,14 @@ public class TerritoryService {
                 arene.setControllingTeam(equipe);
                 areneRepository.save(arene);
             });
+
+            if (contextService != null) {
+                contextService.identifyAndSaveArenaType(areneId);
+            }
+
+            if (contextService != null) {
+                contextService.updateTeamAura(winningTeamId, areneId);
+            }
 
             // Vérifier les zones impactées
             checkZonesImpactedByArene(areneId);

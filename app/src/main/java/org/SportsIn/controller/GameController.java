@@ -50,28 +50,28 @@ public class GameController {
     }
 
     @PostMapping("/{id}/join")
-    public ResponseEntity<Game> join(@NonNull @PathVariable String id, @RequestBody Map<String, Long> body) {
+    public ResponseEntity<?> join(@NonNull @PathVariable String id, @RequestBody Map<String, Long> body) {
         Long opponentTeamId = body.get("opponentTeamId");
         if (opponentTeamId == null) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body("opponentTeamId manquant — rejoins d'abord une équipe");
         }
         try {
-            return gameService.joinGame(id, opponentTeamId)
-                    .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());
+            java.util.Optional<Game> result = gameService.joinGame(id, opponentTeamId);
+            if (result.isEmpty()) return ResponseEntity.status(404).body("Jeu introuvable");
+            return ResponseEntity.ok(result.get());
         } catch (IllegalStateException | IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
     @PostMapping("/{id}/start")
-    public ResponseEntity<Game> start(@NonNull @PathVariable String id) {
+    public ResponseEntity<?> start(@NonNull @PathVariable String id) {
         try {
-            return gameService.startGame(id)
-                    .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.notFound().build());
+            java.util.Optional<Game> result = gameService.startGame(id);
+            if (result.isEmpty()) return ResponseEntity.status(404).body("Jeu introuvable");
+            return ResponseEntity.ok(result.get());
         } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 

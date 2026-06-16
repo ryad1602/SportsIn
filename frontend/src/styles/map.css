@@ -2,14 +2,70 @@
    Map Page Styles
    ======================================== */
 
+/* Mission ring animation on markers */
+@keyframes dna-mission-spin {
+  to { transform: rotate(360deg); }
+}
+.dna-mission-ring {
+  animation: dna-mission-spin 8s linear infinite;
+  transform-origin: center;
+}
+
+/* Affinity ring pulse */
+@keyframes dna-affinity-pulse {
+  0%, 100% { opacity: 0.9; }
+  50%       { opacity: 0.35; }
+}
+.dna-affinity-ring {
+  animation: dna-affinity-pulse 2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* DNA filter chips (inside .map-layers) */
+.map-dna-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.map-dna-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: var(--gray-300);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.map-dna-chip:hover {
+  border-color: rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.1);
+}
+
+.map-dna-chip.active {
+  background: color-mix(in srgb, var(--db, #374151) 30%, transparent);
+  border-color: color-mix(in srgb, var(--dc, #94a3b8) 60%, transparent);
+  color: var(--dc, #e2e8f0);
+}
+
 .map-page {
   height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .map-container {
   flex: 1;
+  min-height: 0;
   position: relative;
   margin-top: 72px;
 }
@@ -59,6 +115,22 @@
 
 .map-status-item--success {
   color: var(--success-400);
+}
+
+/* Badge affinité équipe dans la barre de statut */
+.map-affinity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ac, #e2e8f0);
+  background: color-mix(in srgb, var(--ab, #374151) 25%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ac, #e2e8f0) 35%, transparent);
+  cursor: default;
 }
 
 /* Controls */
@@ -157,22 +229,35 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+}
+
+.map-layer-icon--arena {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #38bdf8;
+  border: 2px solid #0c4a6e;
+  box-shadow: 0 0 6px #38bdf844;
 }
 
 .map-layer-icon--zone {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   background: var(--primary-500);
-  opacity: 0.3;
+  opacity: 0.4;
   border-radius: 3px;
 }
 
 .map-layer-icon--route {
-  width: 16px;
+  width: 18px;
   height: 4px;
   background: var(--warning-500);
   border-radius: 2px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--warning-500) 0px, var(--warning-500) 5px,
+    transparent 5px, transparent 8px
+  );
 }
 
 /* Legend toggle */
@@ -249,6 +334,16 @@
   flex-shrink: 0;
 }
 
+.map-legend-dna {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .map-legend-route {
   width: 20px;
   height: 4px;
@@ -269,9 +364,27 @@
   margin: 8px 0;
 }
 
+.map-legend-section {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 4px;
+}
+
 /* Popup styles */
 .map-popup-content {
   min-width: 200px;
+}
+
+.map-popup--arena .leaflet-popup-content {
+  max-height: min(60vh, 440px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding-right: 4px;
+  scroll-behavior: smooth;
 }
 
 .map-popup-content h4 {
@@ -466,6 +579,42 @@
   font-size: 0.75rem;
   color: #92400e;
   font-weight: 500;
+}
+
+/* Popup — Evidence (pourquoi ce type de terrain) */
+.map-popup-evidence {
+  padding: 6px 0 8px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 6px;
+}
+
+.map-popup-evidence-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #475569;
+  margin-bottom: 3px;
+}
+
+.map-popup-evidence-item {
+  font-size: 0.68rem;
+  color: #64748b;
+  padding: 1px 0;
+  line-height: 1.35;
+}
+
+.map-popup-evidence-place {
+  color: #475569;
+  font-weight: 600;
+}
+
+.map-popup-evidence-type {
+  color: #64748b;
+}
+
+.map-popup-evidence-distance {
+  color: #94a3b8;
 }
 
 /* Responsive */

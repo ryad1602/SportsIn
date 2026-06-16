@@ -2,6 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { missionAPI } from "../api/api.js";
 import Header from "../components/Header.jsx";
+import {
+  IconTarget, IconCheck, IconClock, IconAlertTriangle,
+  IconTrophy, IconStar, IconSearch, IconList,
+} from "../components/Icons.jsx";
+import { SkeletonList } from "../components/Skeleton.jsx";
+import ErrorBanner from "../components/ErrorBanner.jsx";
 import "../styles/missions.css";
 
 const MISSION_TYPE_LABELS = {
@@ -39,11 +45,11 @@ const formatDate = (dateStr) => {
 };
 
 const FILTERS = [
-  { key: null, label: "Toutes" },
-  { key: "ACTIVE", label: "🎯 Actives" },
-  { key: "SUCCESS", label: "✅ Réussies" },
-  { key: "EXPIRED", label: "⏰ Expirées" },
-  { key: "FAILED", label: "❌ Échouées" },
+  { key: null,      label: "Toutes"   },
+  { key: "ACTIVE",  label: "Actives"  },
+  { key: "SUCCESS", label: "Réussies" },
+  { key: "EXPIRED", label: "Expirées" },
+  { key: "FAILED",  label: "Échouées" },
 ];
 
 export default function MissionsPage() {
@@ -105,10 +111,10 @@ export default function MissionsPage() {
         <Header />
         <main className="missions-content">
           <div className="missions-hero">
-            <h1 className="missions-title">🎯 Missions</h1>
+            <h1 className="missions-title"><IconTarget size={28} /> Missions</h1>
           </div>
           <div className="missions-no-team">
-            <span className="missions-no-team__icon">⚠️</span>
+            <span className="missions-no-team__icon"><IconAlertTriangle size={32} /></span>
             <p className="missions-no-team__text">
               Rejoins une équipe pour accéder aux missions dynamiques !
             </p>
@@ -131,7 +137,7 @@ export default function MissionsPage() {
       <main className="missions-content">
         {/* Title */}
         <div className="missions-hero">
-          <h1 className="missions-title">🎯 Missions</h1>
+          <h1 className="missions-title"><IconTarget size={24} /> Missions</h1>
           <p className="missions-subtitle">
             Complète des missions pour gagner des points et de l'XP
           </p>
@@ -151,15 +157,10 @@ export default function MissionsPage() {
         </div>
 
         {/* Error */}
-        {error && <div className="missions-error">{error}</div>}
+        <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
         {/* Loading */}
-        {loading && (
-          <div className="missions-loading">
-            <div className="missions-loading__spinner" />
-            <p>Chargement des missions…</p>
-          </div>
-        )}
+        {loading && <SkeletonList count={3} lines={2} />}
 
         {/* Mission list */}
         {!loading && !error && (
@@ -167,7 +168,7 @@ export default function MissionsPage() {
             {activeMissions.length === 0 ? (
               <div className="missions-empty">
                 <div className="missions-empty__icon">
-                  {filter === "ACTIVE" ? "🔍" : "📋"}
+                  {filter === "ACTIVE" ? <IconSearch size={32} /> : <IconList size={32} />}
                 </div>
                 <p className="missions-empty__text">
                   {filter === "ACTIVE"
@@ -209,7 +210,7 @@ export default function MissionsPage() {
                         </div>
                         <span className={`mission-card__status mission-card__status--${mission.status}`}>
                           {mission.status === "ACTIVE" && "En cours"}
-                          {mission.status === "SUCCESS" && "Réussie ✓"}
+                          {mission.status === "SUCCESS" && <><IconCheck size={13} /> Réussie</>}
                           {mission.status === "EXPIRED" && "Expirée"}
                           {mission.status === "FAILED" && "Échouée"}
                         </span>
@@ -237,11 +238,11 @@ export default function MissionsPage() {
                       <div className="mission-card__footer">
                         <div className="mission-card__rewards">
                           <span className="mission-card__reward mission-card__reward--points">
-                            🏆 +{mission.rewardTeamPoints} pts
+                            <IconTrophy size={13} /> +{mission.rewardTeamPoints} pts
                           </span>
                           {detail?.rewardTeamXp > 0 && (
                             <span className="mission-card__reward mission-card__reward--xp">
-                              ⭐ +{detail.rewardTeamXp} XP
+                              <IconStar size={13} /> +{detail.rewardTeamXp} XP
                             </span>
                           )}
                         </div>
@@ -249,7 +250,7 @@ export default function MissionsPage() {
                           <span
                             className={`mission-card__timer${isUrgent ? " mission-card__timer--urgent" : ""}`}
                           >
-                            ⏳ {formatTimeRemaining(mission.endsAt)}
+                            <IconClock size={13} /> {formatTimeRemaining(mission.endsAt)}
                           </span>
                         )}
                         {mission.status === "SUCCESS" && detail?.completedAt && (

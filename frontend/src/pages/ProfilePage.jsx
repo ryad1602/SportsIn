@@ -1,41 +1,54 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext.jsx";
 import { authAPI } from "../api/api.js";
+import Header from "../components/Header.jsx";
+import { cardVariants } from "../components/PageTransition.jsx";
+import { IconArrowRight, IconCheck, IconUser } from "../components/Icons.jsx";
+import "../styles/profile.css";
+
+function EyeIcon({ open }) {
+  return open ? (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
+  ) : (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+      <line x1="1" y1="1" x2="23" y2="23"/>
+    </svg>
+  );
+}
 
 function ProfilePage() {
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
 
-  // Formulaire pseudo
-  const [newPseudo, setNewPseudo] = useState("");
-  const [savingPseudo, setSavingPseudo] = useState(false);
-  const [pseudoSuccess, setPseudoSuccess] = useState("");
-  const [pseudoError, setPseudoError] = useState("");
+  const [newPseudo, setNewPseudo]         = useState("");
+  const [savingPseudo, setSavingPseudo]   = useState(false);
 
-  // Formulaire mot de passe
-  const [newPassword, setNewPassword] = useState("");
+  const [newPassword, setNewPassword]         = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [savingPassword, setSavingPassword] = useState(false);
-  const [passwordSuccess, setPasswordSuccess] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const [showPassword, setShowPassword]       = useState(false);
+  const [savingPassword, setSavingPassword]   = useState(false);
 
   const handleUpdatePseudo = async (e) => {
     e.preventDefault();
     if (!newPseudo.trim()) return;
     setSavingPseudo(true);
-    setPseudoError("");
-    setPseudoSuccess("");
+    const tid = toast.loading("Mise à jour du pseudo…");
     try {
       const updated = await authAPI.updateProfile(user.id, { pseudo: newPseudo.trim() });
       const updatedUser = { ...user, pseudo: updated.pseudo };
       sessionStorage.setItem("insport_user", JSON.stringify(updatedUser));
       if (setUser) setUser(updatedUser);
-      setPseudoSuccess("Pseudo mis à jour avec succès !");
       setNewPseudo("");
+      toast.success("Pseudo mis à jour !", { id: tid });
     } catch (err) {
-      setPseudoError(err.message || "Erreur lors de la mise à jour du pseudo");
+      toast.error(err.message || "Erreur lors de la mise à jour", { id: tid });
     } finally {
       setSavingPseudo(false);
     }
@@ -43,147 +56,114 @@ function ProfilePage() {
 
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
-    setPasswordError("");
-    setPasswordSuccess("");
     if (newPassword.length < 6) {
-      setPasswordError("Le mot de passe doit contenir au moins 6 caractères");
+      toast.error("Le mot de passe doit contenir au moins 6 caractères");
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError("Les mots de passe ne correspondent pas");
+      toast.error("Les mots de passe ne correspondent pas");
       return;
     }
     setSavingPassword(true);
+    const tid = toast.loading("Mise à jour du mot de passe…");
     try {
       await authAPI.updateProfile(user.id, { password: newPassword });
-      setPasswordSuccess("Mot de passe mis à jour avec succès !");
       setNewPassword("");
       setConfirmPassword("");
+      toast.success("Mot de passe mis à jour !", { id: tid });
     } catch (err) {
-      setPasswordError(err.message || "Erreur lors de la mise à jour du mot de passe");
+      toast.error(err.message || "Erreur lors de la mise à jour", { id: tid });
     } finally {
       setSavingPassword(false);
     }
   };
 
-  const containerStyle = {
-    width: "100vw",
-    minHeight: "calc(100vh - 64px)",
-    backgroundColor: "#111",
-    color: "white",
-  };
-
-  const mainStyle = {
-    padding: "32px",
-    maxWidth: "560px",
-    margin: "0 auto",
-  };
-
-  const cardStyle = {
-    background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
-    borderRadius: "16px",
-    padding: "24px",
-    marginBottom: "20px",
-    border: "1px solid #333",
-  };
-
-  const inputStyle = {
-    width: "100%",
-    padding: "12px 14px",
-    borderRadius: "10px",
-    border: "1px solid #444",
-    background: "#0d0d1a",
-    color: "white",
-    fontSize: "15px",
-    outline: "none",
-    boxSizing: "border-box",
-  };
-
-  const btnPrimary = {
-    padding: "12px 24px",
-    borderRadius: "10px",
-    border: "none",
-    background: "linear-gradient(135deg, #1e88e5 0%, #1565c0 100%)",
-    color: "white",
-    fontWeight: "600",
-    fontSize: "15px",
-    cursor: "pointer",
-  };
-
-  const labelStyle = {
-    display: "block",
-    marginBottom: "6px",
-    fontSize: "13px",
-    opacity: 0.7,
-    fontWeight: 600,
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
-  };
-
-  const successStyle = { color: "#4caf50", fontSize: "14px", marginTop: "10px" };
-  const errorStyle = { color: "#e53935", fontSize: "14px", marginTop: "10px" };
-
   if (!user) {
     return (
-      <div style={containerStyle}>
-        <main style={mainStyle}>
-          <p style={{ opacity: 0.7 }}>Aucun utilisateur connecté.</p>
+      <div className="profile-container">
+        <Header />
+        <main className="profile-main">
+          <p style={{ color: "var(--gray-400)" }}>Aucun utilisateur connecté.</p>
         </main>
       </div>
     );
   }
 
   return (
-    <div style={containerStyle}>
-      <main style={mainStyle}>
-        <button
-          onClick={() => navigate("/")}
-          style={{ background: "transparent", border: "1px solid #333", color: "white", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", marginBottom: "24px" }}
-        >
-          ← Retour
+    <div className="profile-container">
+      <Header />
+      <main className="profile-main">
+
+        <button className="profile-back" onClick={() => navigate("/")}>
+          <IconArrowRight size={14} style={{ transform: "rotate(180deg)" }} />
+          Retour
         </button>
 
-        <h1 style={{ marginBottom: "24px" }}>Mon profil</h1>
+        {/* Avatar + nom */}
+        <motion.div className="profile-header"
+          variants={cardVariants} initial="hidden" animate="visible" custom={0}>
+          <div className="profile-avatar">
+            {user.pseudo?.charAt(0).toUpperCase() || <IconUser size={28} />}
+          </div>
+          <div className="profile-header-info">
+            <h1 className="profile-name">{user.pseudo}</h1>
+            <p className="profile-email">{user.email}</p>
+          </div>
+        </motion.div>
 
         {/* Infos actuelles */}
-        <div style={cardStyle}>
-          <h3 style={{ marginTop: 0, marginBottom: "16px", color: "#90caf9" }}>Informations</h3>
-          <p style={{ margin: "0 0 8px" }}><span style={{ opacity: 0.6 }}>Pseudo :</span> <strong>{user.pseudo}</strong></p>
-          <p style={{ margin: 0 }}><span style={{ opacity: 0.6 }}>Email :</span> <strong>{user.email}</strong></p>
-        </div>
+        <motion.div className="profile-card"
+          variants={cardVariants} initial="hidden" animate="visible" custom={1}>
+          <p className="profile-card-title">Informations du compte</p>
+          <div className="profile-info-row">
+            <span className="profile-info-label">Pseudo</span>
+            <span className="profile-info-value">{user.pseudo}</span>
+          </div>
+          <div className="profile-info-row">
+            <span className="profile-info-label">Email</span>
+            <span className="profile-info-value">{user.email}</span>
+          </div>
+        </motion.div>
 
-        {/* Changer le pseudo */}
-        <div style={cardStyle}>
-          <h3 style={{ marginTop: 0, marginBottom: "16px" }}>Changer le pseudo</h3>
+        {/* Changer pseudo */}
+        <motion.div className="profile-card"
+          variants={cardVariants} initial="hidden" animate="visible" custom={2}>
+          <p className="profile-card-title">Changer le pseudo</p>
           <form onSubmit={handleUpdatePseudo}>
-            <label style={labelStyle}>Nouveau pseudo</label>
-            <input
-              style={inputStyle}
-              type="text"
-              placeholder={user.pseudo}
-              value={newPseudo}
-              onChange={(e) => setNewPseudo(e.target.value)}
-              required
-              minLength={2}
-            />
-            {pseudoError && <p style={errorStyle}>{pseudoError}</p>}
-            {pseudoSuccess && <p style={successStyle}>{pseudoSuccess}</p>}
-            <button type="submit" style={{ ...btnPrimary, marginTop: "14px" }} disabled={savingPseudo || !newPseudo.trim()}>
-              {savingPseudo ? "Enregistrement..." : "Mettre à jour le pseudo"}
+            <div className="profile-field">
+              <label className="profile-label">Nouveau pseudo</label>
+              <input
+                className="profile-input"
+                type="text"
+                placeholder={user.pseudo}
+                value={newPseudo}
+                onChange={(e) => setNewPseudo(e.target.value)}
+                required
+                minLength={2}
+              />
+            </div>
+            <button
+              type="submit"
+              className="profile-submit"
+              disabled={savingPseudo || !newPseudo.trim()}
+            >
+              <IconCheck size={16} />
+              {savingPseudo ? "Enregistrement…" : "Mettre à jour le pseudo"}
             </button>
           </form>
-        </div>
+        </motion.div>
 
-        {/* Changer le mot de passe */}
-        <div style={cardStyle}>
-          <h3 style={{ marginTop: 0, marginBottom: "16px" }}>Changer le mot de passe</h3>
+        {/* Changer mot de passe */}
+        <motion.div className="profile-card"
+          variants={cardVariants} initial="hidden" animate="visible" custom={3}>
+          <p className="profile-card-title">Changer le mot de passe</p>
           <form onSubmit={handleUpdatePassword}>
-            <div style={{ marginBottom: "14px" }}>
-              <label style={labelStyle}>Nouveau mot de passe</label>
-              <div style={{ position: "relative" }}>
+            <div className="profile-field">
+              <label className="profile-label">Nouveau mot de passe</label>
+              <div className="profile-input-wrap">
                 <input
-                  style={{ ...inputStyle, paddingRight: "44px" }}
-                  type={showNewPassword ? "text" : "password"}
+                  className="profile-input profile-input--padded"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -192,19 +172,19 @@ function ProfilePage() {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#aaa", cursor: "pointer", fontSize: "18px", lineHeight: 1 }}
+                  className="profile-eye"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Masquer" : "Afficher"}
                 >
-                  {showNewPassword ? "🙈" : "👁"}
+                  <EyeIcon open={showPassword} />
                 </button>
               </div>
             </div>
-
-            <div>
-              <label style={labelStyle}>Confirmer le mot de passe</label>
+            <div className="profile-field">
+              <label className="profile-label">Confirmer le mot de passe</label>
               <input
-                style={inputStyle}
-                type={showNewPassword ? "text" : "password"}
+                className="profile-input"
+                type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -212,15 +192,17 @@ function ProfilePage() {
                 minLength={6}
               />
             </div>
-
-            {passwordError && <p style={errorStyle}>{passwordError}</p>}
-            {passwordSuccess && <p style={successStyle}>{passwordSuccess}</p>}
-
-            <button type="submit" style={{ ...btnPrimary, marginTop: "14px" }} disabled={savingPassword || !newPassword || !confirmPassword}>
-              {savingPassword ? "Enregistrement..." : "Mettre à jour le mot de passe"}
+            <button
+              type="submit"
+              className="profile-submit"
+              disabled={savingPassword || !newPassword || !confirmPassword}
+            >
+              <IconCheck size={16} />
+              {savingPassword ? "Enregistrement…" : "Mettre à jour le mot de passe"}
             </button>
           </form>
-        </div>
+        </motion.div>
+
       </main>
     </div>
   );

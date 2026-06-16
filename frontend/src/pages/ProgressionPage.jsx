@@ -1,14 +1,25 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  RadialBarChart, RadialBar, ResponsiveContainer, Tooltip,
+  BarChart, Bar, XAxis, YAxis, Cell,
+} from "recharts";
 import { progressionAPI, areneAPI } from "../api/api.js";
 import Header from "../components/Header.jsx";
+import { SkeletonCard, SkeletonStats } from "../components/Skeleton.jsx";
+import ErrorBanner from "../components/ErrorBanner.jsx";
+import {
+  IconShield, IconZap, IconStar, IconTarget, IconBarChart,
+  IconClock, IconRotateCcw, IconPackage, IconMoon, IconLock,
+  IconCheck, IconUsers, IconTrophy, IconAlertTriangle,
+} from "../components/Icons.jsx";
 import "../styles/progression.css";
 
 /** Icône et classe CSS selon le type d'effet */
 const PERK_ICONS = {
-  INFLUENCE_REDUCTION: { icon: "🛡️", className: "perk-icon--shield" },
-  INFLUENCE_BOOST: { icon: "⚡", className: "perk-icon--boost" },
-  XP_MULTIPLIER: { icon: "✨", className: "perk-icon--xp" },
+  INFLUENCE_REDUCTION: { icon: <IconShield size={20} />, className: "perk-icon--shield" },
+  INFLUENCE_BOOST:     { icon: <IconZap size={20} />,   className: "perk-icon--boost"  },
+  XP_MULTIPLIER:       { icon: <IconStar size={20} />,  className: "perk-icon--xp"     },
 };
 
 /** Formate une durée en secondes vers un texte lisible */
@@ -120,7 +131,7 @@ function ProgressionPage() {
   };
 
   const getPerkIcon = (effectType) => {
-    return PERK_ICONS[effectType] || { icon: "🎯", className: "perk-icon--default" };
+    return PERK_ICONS[effectType] || { icon: <IconTarget size={20} />, className: "perk-icon--default" };
   };
 
   const isUnlocked = (perk) => {
@@ -132,10 +143,7 @@ function ProgressionPage() {
     if (progression.level >= (progression.maxLevel || 10)) return 100;
     if (progression.xpForNextLevel <= 0) return 100;
     // Calculate XP into current level
-    const totalXpForNext = progression.xpForNextLevel;
     const currentXp = progression.xp;
-    // xpForNextLevel is XP *remaining* to next level
-    const xpIntoLevel = totalXpForNext > 0 ? currentXp : 0;
     // We need to compute the progress within the current level
     // The controller returns xpForNextLevel as the remaining XP
     const levelXp = getLevelXpRequired(progression.level);
@@ -162,7 +170,7 @@ function ProgressionPage() {
         <Header />
         <main className="progression-content">
           <div className="progression-no-team">
-            <span className="progression-no-team__icon">👥</span>
+            <span className="progression-no-team__icon"><IconUsers size={40} /></span>
             <p>Rejoignez une équipe pour accéder à la progression</p>
             <button className="btn btn-primary" onClick={() => navigate("/team")}>
               Voir les équipes
@@ -178,10 +186,9 @@ function ProgressionPage() {
       <div className="progression-page">
         <Header />
         <main className="progression-content">
-          <div className="progression-loading">
-            <div className="spinner" />
-            <p>Chargement de la progression...</p>
-          </div>
+          <SkeletonStats count={4} />
+          <SkeletonCard lines={3} />
+          <SkeletonCard lines={2} />
         </main>
       </div>
     );
@@ -202,13 +209,7 @@ function ProgressionPage() {
           <h1>Progression</h1>
         </div>
 
-        {error && (
-          <div className="progression-error animate-slideDown">
-            <span>⚠️</span>
-            <p>{error}</p>
-            <button onClick={() => setError(null)}>×</button>
-          </div>
-        )}
+        <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
         {/* Tabs */}
         <div className="prog-tabs">
@@ -216,19 +217,19 @@ function ProgressionPage() {
             className={`prog-tab ${activeTab === "overview" ? "prog-tab--active" : ""}`}
             onClick={() => setActiveTab("overview")}
           >
-            📊 Vue d'ensemble
+            <IconBarChart size={16} /> Vue d'ensemble
           </button>
           <button
             className={`prog-tab ${activeTab === "catalog" ? "prog-tab--active" : ""}`}
             onClick={() => setActiveTab("catalog")}
           >
-            🎯 Catalogue perks
+            <IconTarget size={16} /> Catalogue perks
           </button>
           <button
             className={`prog-tab ${activeTab === "active" ? "prog-tab--active" : ""}`}
             onClick={() => setActiveTab("active")}
           >
-            ⚡ Perks actifs
+            <IconZap size={16} /> Perks actifs
             {activePerks.length > 0 && (
               <span className="badge badge-primary" style={{ marginLeft: 6, fontSize: "0.7rem" }}>
                 {activePerks.length}
@@ -255,7 +256,7 @@ function ProgressionPage() {
                       <> — <strong>{progression.xpForNextLevel}</strong> XP avant niveau {progression.level + 1}</>
                     )}
                     {progression.level >= (progression.maxLevel || 10) && (
-                      <> — Niveau maximum atteint ! 🏆</>
+                      <> — Niveau maximum atteint ! <IconTrophy size={16} /></>
                     )}
                   </p>
                   <div className="xp-progress">
@@ -297,6 +298,72 @@ function ProgressionPage() {
               </div>
             </div>
 
+            {/* === Charts === */}
+            <div className="prog-charts-row">
+              {/* Radial XP gauge */}
+              <div className="prog-card prog-chart-card">
+                <div className="prog-card__header">
+                  <h3>Progression XP</h3>
+                  <span className="badge badge-primary">Niv. {progression.level}</span>
+                </div>
+                <ResponsiveContainer width="100%" height={180}>
+                  <RadialBarChart
+                    cx="50%" cy="50%"
+                    innerRadius="60%" outerRadius="80%"
+                    startAngle={200} endAngle={-20}
+                    data={[
+                      { name: 'XP', value: 100, fill: 'var(--surface-2, #1e293b)' },
+                      { name: 'XP', value: xpPercent(), fill: 'var(--primary, #6366f1)' },
+                    ]}
+                  >
+                    <RadialBar dataKey="value" cornerRadius={6} background={{ fill: 'var(--surface-2, #1e293b)' }} />
+                    <Tooltip formatter={(v) => [`${Math.round(v)}%`, 'Progression']} />
+                  </RadialBarChart>
+                </ResponsiveContainer>
+                <p className="prog-chart-label">
+                  {progression.level >= (progression.maxLevel || 10)
+                    ? 'Niveau maximum atteint'
+                    : `${Math.round(xpPercent())}% vers le niveau ${progression.level + 1}`}
+                </p>
+              </div>
+
+              {/* Terrain coverage bar chart */}
+              {arenas.length > 0 && (() => {
+                const DNA_COLORS_CHART = { ABYSSE: '#38bdf8', OLYMPE: '#fbbf24', EDEN: '#4ade80', NEXUS: '#f87171', NEUTRE: '#94a3b8' };
+                const counts = arenas.reduce((acc, a) => {
+                  const t = a.dnaType || 'NEUTRE';
+                  acc[t] = (acc[t] || 0) + 1;
+                  return acc;
+                }, {});
+                const data = Object.entries(counts).map(([type, count]) => ({ type, count, fill: DNA_COLORS_CHART[type] || '#94a3b8' }));
+                return (
+                  <div className="prog-card prog-chart-card">
+                    <div className="prog-card__header">
+                      <h3>Terrains contrôlés</h3>
+                      <span className="badge badge-success">{arenas.length}</span>
+                    </div>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <BarChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+                        <XAxis dataKey="type" tick={{ fill: 'var(--gray-400, #94a3b8)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis allowDecimals={false} tick={{ fill: 'var(--gray-400, #94a3b8)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                          contentStyle={{ background: 'var(--surface, #0f172a)', border: '1px solid var(--border, #334155)', borderRadius: 8 }}
+                          labelStyle={{ color: 'var(--text-primary, #f1f5f9)' }}
+                          itemStyle={{ color: 'var(--text-secondary, #94a3b8)' }}
+                        />
+                        <Bar dataKey="count" name="Arènes" radius={[4, 4, 0, 0]}>
+                          {data.map((entry) => (
+                            <Cell key={entry.type} fill={entry.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                );
+              })()}
+            </div>
+
             {/* Unlocked Perks summary */}
             {progression.unlockedPerks?.length > 0 && (
               <div className="prog-card">
@@ -317,8 +384,8 @@ function ProgressionPage() {
                           </div>
                           <p className="perk-details__desc">{perk.description}</p>
                           <div className="perk-meta">
-                            <span className="perk-meta__tag">⏱ {formatDuration(perk.durationSeconds)}</span>
-                            <span className="perk-meta__tag">🔄 Cooldown {formatDuration(perk.cooldownSeconds)}</span>
+                            <span className="perk-meta__tag"><IconClock size={12} /> {formatDuration(perk.durationSeconds)}</span>
+                            <span className="perk-meta__tag"><IconRotateCcw size={12} /> Cooldown {formatDuration(perk.cooldownSeconds)}</span>
                           </div>
                         </div>
                         <div className="perk-actions">
@@ -360,14 +427,14 @@ function ProgressionPage() {
                       <div className="perk-details__name">{perk.name}</div>
                       <p className="perk-details__desc">{perk.description}</p>
                       <div className="perk-meta">
-                        <span className="perk-meta__tag">⏱ Durée : {formatDuration(perk.durationSeconds)}</span>
-                        <span className="perk-meta__tag">🔄 Cooldown : {formatDuration(perk.cooldownSeconds)}</span>
-                        <span className="perk-meta__tag">📦 Max : {perk.maxActiveInstances}</span>
+                        <span className="perk-meta__tag"><IconClock size={12} /> {formatDuration(perk.durationSeconds)}</span>
+                        <span className="perk-meta__tag"><IconRotateCcw size={12} /> {formatDuration(perk.cooldownSeconds)}</span>
+                        <span className="perk-meta__tag"><IconPackage size={12} /> {perk.maxActiveInstances}</span>
                       </div>
                     </div>
                     <div className="perk-actions">
                       <span className={`perk-level-req ${unlocked ? "perk-level-req--unlocked" : "perk-level-req--locked"}`}>
-                        {unlocked ? "✓" : "🔒"} Niv. {perk.requiredLevel}
+                        {unlocked ? <IconCheck size={13} /> : <IconLock size={13} />} Niv. {perk.requiredLevel}
                       </span>
                       {unlocked && (
                         <button
@@ -387,7 +454,7 @@ function ProgressionPage() {
               })}
               {catalog.length === 0 && (
                 <div className="no-active-perks">
-                  <span className="no-active-perks__icon">📦</span>
+                  <span className="no-active-perks__icon"><IconPackage size={36} /></span>
                   <p>Aucun perk disponible</p>
                 </div>
               )}
@@ -430,7 +497,7 @@ function ProgressionPage() {
               </ul>
             ) : (
               <div className="no-active-perks">
-                <span className="no-active-perks__icon">💤</span>
+                <span className="no-active-perks__icon"><IconMoon size={36} /></span>
                 <p>Aucun perk actif</p>
                 <span style={{ color: "var(--gray-500)", fontSize: "0.85rem" }}>
                   Activez un perk depuis le catalogue ou la vue d'ensemble
@@ -467,8 +534,8 @@ function ProgressionPage() {
               )}
 
               <div className="perk-meta" style={{ marginBottom: 16 }}>
-                <span className="perk-meta__tag">⏱ Durée : {formatDuration(activatingPerk.durationSeconds)}</span>
-                <span className="perk-meta__tag">🔄 Cooldown ensuite : {formatDuration(activatingPerk.cooldownSeconds)}</span>
+                <span className="perk-meta__tag"><IconClock size={12} /> {formatDuration(activatingPerk.durationSeconds)}</span>
+                <span className="perk-meta__tag"><IconRotateCcw size={12} /> {formatDuration(activatingPerk.cooldownSeconds)}</span>
               </div>
 
               {activateError && (

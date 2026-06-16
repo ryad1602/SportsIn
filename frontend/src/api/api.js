@@ -10,7 +10,7 @@ const API_BASE_URL = '/api'; // Utilise le proxy Vite
  */
 const fetchAPI = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
-  const token = sessionStorage.getItem('insport_token');
+  const token = localStorage.getItem('insport_token');
 
   const headers = {
     'Content-Type': 'application/json',
@@ -68,6 +68,13 @@ export const equipeAPI = {
   delete: async (id) => fetchAPI(`/equipes/${id}`, { method: 'DELETE' }),
   join: async (equipeId, joueurId) => fetchAPI(`/equipes/${equipeId}/join`, { method: 'POST', body: JSON.stringify({ joueurId }) }),
   leave: async (joueurId) => fetchAPI('/equipes/leave', { method: 'POST', body: JSON.stringify({ joueurId }) }),
+  /** [F7.1] Met à jour l'affinité de terrain de l'équipe. */
+  updateAffinity: async (id, affinityType) => fetchAPI(`/equipes/${id}/affinity`, {
+    method: 'PATCH',
+    body: JSON.stringify({ affinityType }),
+  }),
+  /** [F10 - AJOUTÉ] Retourne le statut du Terrain Mastery. */
+  getTerrainMastery: async (id) => fetchAPI(`/equipes/${id}/terrain-mastery`),
 };
 
 /**
@@ -93,6 +100,49 @@ export const areneAPI = {
   create: async (data) => fetchAPI('/arenes', { method: 'POST', body: JSON.stringify(data) }),
   update: async (id, data) => fetchAPI(`/arenes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: async (id) => fetchAPI(`/arenes/${id}`, { method: 'DELETE' }),
+
+  /**
+   * [F7 - AJOUTÉ] Découvre des stades près d'un point GPS via Google Places (type=stadium)
+   * et les ajoute automatiquement en base s'ils ne sont pas encore connus.
+   * @param {number} lat - latitude
+   * @param {number} lng - longitude
+   * @param {number} radiusMeters - rayon de recherche en mètres (défaut 5000)
+   */
+  discoverNear: async (lat, lng, radiusMeters = 5000, maxNewArenes = 10) =>
+    fetchAPI('/arenes/discover', {
+      method: 'POST',
+      body: JSON.stringify({ lat, lng, radiusMeters, maxNewArenes })
+    }),
+
+  /**
+   * [F7 - AJOUTÉ] Découvre des stades dans les 10 grandes villes françaises et les ajoute
+   * en base. C'est l'action du bouton "🏟️ Explorer" dans MapPage.
+   */
+  discoverFrance: async (radiusMeters = 10000, maxNewArenes = 10) =>
+    fetchAPI('/arenes/discover-france', {
+      method: 'POST',
+      body: JSON.stringify({ radiusMeters, maxNewArenes })
+    }),
+
+  /** Supprime toutes les arènes existantes. */
+  deleteAll: async () => fetchAPI('/arenes', { method: 'DELETE' }),
+
+  /**
+   * Supprime toutes les arènes puis en redécouvre un lot limité.
+   * scope: "FRANCE" ou "NEAR"
+   */
+  resetAndDiscover: async ({ scope = 'FRANCE', lat = 48.8566, lng = 2.3522, radiusMeters = 10000, maxNewArenes = 10 } = {}) =>
+    fetchAPI('/arenes/reset-and-discover', {
+      method: 'POST',
+      body: JSON.stringify({ scope, lat, lng, radiusMeters, maxNewArenes })
+    }),
+
+  /** Simule reset+discover sans écrire en base. */
+  resetAndDiscoverDryRun: async ({ scope = 'FRANCE', lat = 48.8566, lng = 2.3522, radiusMeters = 10000, maxNewArenes = 10 } = {}) =>
+    fetchAPI('/arenes/reset-and-discover/dry-run', {
+      method: 'POST',
+      body: JSON.stringify({ scope, lat, lng, radiusMeters, maxNewArenes })
+    }),
 };
 
 /**
@@ -200,6 +250,33 @@ export const messageAPI = {
   delete: async (id) => fetchAPI(`/messages/${id}`, { method: 'DELETE' }),
 };
 
+/**
+ * ========== CONTEXT (Avantage du Terrain) ========== [F7 - AJOUTÉ]
+ */
+export const contextAPI = {
+  /** Bonus contextuels pour une équipe sur une arène. teamId est optionnel. */
+  getArenaContext: async (areneId, teamId) => {
+    const query = teamId ? `?teamId=${teamId}` : '';
+    return fetchAPI(`/context/arene/${areneId}${query}`);
+  },
+  /** Force l'identification du terrain via Google Places. */
+  identifyArena: async (areneId) =>
+    fetchAPI(`/context/arene/${areneId}/identify`, { method: 'POST' }),
+  /** Retourne l'aura actuelle d'une équipe et son historique. */
+  getTeamAura: async (teamId) => fetchAPI(`/context/team/${teamId}/aura`),
+  /** Identifie uniquement les arènes sans dnaType (s'arrête si déjà identifié). */
+  identifyAllArenas: async () =>
+    fetchAPI('/context/arenes/identify-all', { method: 'POST' }),
+
+  /** [F7.1] Force la re-identification de TOUTES les arènes via Google Places API,
+   * même celles déjà identifiées (écrase les valeurs pré-chargées depuis data.sql).
+   * À utiliser depuis le bouton "Rafraîchir terrains" dans MapPage.
+   */
+  forceIdentifyAllArenas: async () =>
+    fetchAPI('/context/arenes/identify-all?force=true', { method: 'POST' }),
+
+};
+
 export default {
   authAPI,
   equipeAPI,
@@ -214,4 +291,5 @@ export default {
   missionAPI,
   progressionAPI,
   messageAPI,
+  contextAPI,  // [F7 - AJOUTÉ]
 };

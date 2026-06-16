@@ -1,9 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext.jsx";
 import { equipeAPI, sessionAPI } from "../api/api.js";
 import Header from "../components/Header.jsx";
 import Button from "../components/Button.jsx";
+import { cardVariants } from "../components/PageTransition.jsx";
+import {
+  IconSword, IconMap, IconTarget, IconUsers, IconClock, IconUser,
+  IconAlertTriangle, IconMapPin, IconZap, IconShield, IconChevronRight,
+} from "../components/Icons.jsx";
 import "../styles/home.css";
 
 export default function HomePage() {
@@ -67,32 +73,35 @@ export default function HomePage() {
 
         {/* Team Badge ou Warning */}
         {team ? (
-          <div className="home-team-badge">
+          <motion.div className="home-team-badge"
+            variants={cardVariants} initial="hidden" animate="visible" custom={0}>
             <div
               className="home-team-badge__icon"
               style={{ backgroundColor: team.couleur || "#3b82f6" }}
             >
-              👥
+              <IconShield size={20} />
             </div>
             <div className="home-team-badge__info">
               <div className="home-team-badge__name">{team.nom}</div>
               <div className="home-team-badge__role">Membre de l'équipe</div>
             </div>
-          </div>
+          </motion.div>
         ) : !loading && (
-          <div className="home-no-team" onClick={() => navigate("/team")}>
-            <span className="home-no-team__icon">⚠️</span>
+          <motion.div className="home-no-team" onClick={() => navigate("/team")}
+            variants={cardVariants} initial="hidden" animate="visible" custom={0}>
+            <span className="home-no-team__icon"><IconAlertTriangle size={22} /></span>
             <div className="home-no-team__text">
               <div className="home-no-team__title">Rejoins une équipe !</div>
               <div className="home-no-team__desc">Tu dois être dans une équipe pour jouer</div>
             </div>
-            <span style={{ color: "var(--gray-500)" }}>→</span>
-          </div>
+            <IconChevronRight size={18} />
+          </motion.div>
         )}
 
         {/* Stats */}
         {(stats.sessions > 0 || stats.victories > 0) && (
-          <div className="home-stats">
+          <motion.div className="home-stats"
+            variants={cardVariants} initial="hidden" animate="visible" custom={1}>
             <div className="home-stat">
               <span className="home-stat__value">{stats.sessions}</span>
               <span className="home-stat__label">Sessions</span>
@@ -107,13 +116,14 @@ export default function HomePage() {
               </span>
               <span className="home-stat__label">Win Rate</span>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Menu Principal */}
-        <div className="home-menu stagger">
+        <motion.div className="home-menu stagger"
+          variants={cardVariants} initial="hidden" animate="visible" custom={2}>
           <Button
-            icon="⚔️"
+            icon={<IconSword size={24} />}
             buttonTitle="Créer un jeu"
             description="Lance un défi et affronte une équipe adverse"
             goTo="/game/create"
@@ -121,14 +131,14 @@ export default function HomePage() {
           />
 
           <Button
-            icon="🗺️"
+            icon={<IconMap size={24} />}
             buttonTitle="Explorer la carte"
             description="Découvre les arènes, zones et routes"
             goTo="/map"
           />
 
           <Button
-            icon="🎯"
+            icon={<IconTarget size={24} />}
             buttonTitle="Missions"
             description="Consulte et complète tes missions dynamiques"
             goTo="/missions"
@@ -136,36 +146,37 @@ export default function HomePage() {
           />
 
           <Button
-            icon="👥"
+            icon={<IconUsers size={24} />}
             buttonTitle="Mon équipe"
             description="Gère ton équipe et tes coéquipiers"
             goTo="/team"
           />
 
           <Button
-            icon="📜"
+            icon={<IconClock size={24} />}
             buttonTitle="Historique"
             description="Consulte tes sessions passées"
             goTo="/history"
           />
 
           <Button
-            icon="👤"
+            icon={<IconUser size={24} />}
             buttonTitle="Mon profil"
             description="Modifie tes informations personnelles"
             goTo="/profile"
           />
-        </div>
+        </motion.div>
 
         {/* Quick Actions */}
-        <div className="home-quick-actions">
+        <motion.div className="home-quick-actions"
+          variants={cardVariants} initial="hidden" animate="visible" custom={3}>
           <button className="quick-action-btn" onClick={() => navigate("/map")}>
-            📍 Arènes proches
+            <IconMapPin size={16} /> Arènes proches
           </button>
           <button className="quick-action-btn" onClick={() => navigate("/game/create")}>
-            ⚡ Match rapide
+            <IconZap size={16} /> Match rapide
           </button>
-        </div>
+        </motion.div>
       </main>
     </div>
   );

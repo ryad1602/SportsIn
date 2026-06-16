@@ -1,9 +1,20 @@
 package org.SportsIn.model;
 
-import jakarta.persistence.*;
 import java.util.List;
-import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import org.SportsIn.model.user.Equipe;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "arene")
@@ -30,6 +41,42 @@ public class Arene {
     @CollectionTable(name = "arene_sport", joinColumns = @JoinColumn(name = "arene_id"))
     @Column(name = "sport_type")
     private List<String> sportsDisponibles;
+
+    /**
+     * Type de terrain identifié via Google Places API.
+     * Valeurs possibles : ABYSSE, OLYMPE, EDEN, NEXUS, NEUTRE.
+     */
+    @Column(name = "dna_type")
+    private String dnaType;
+
+    /**
+     * Score de confiance de la classification (0.0 à 1.0).
+     * Calculé par GooglePlacesService lors de l'identification.
+     */
+    @Column(name = "dna_confidence")
+    private double dnaConfidence;
+
+    /**
+     * Nombre de lieux Google Places inspectés lors de la classification.
+     */
+    @Column(name = "dna_places_count")
+    private int dnaPlacesCount;
+
+    /**
+     * Résumé des 3 lieux principaux ayant justifié le type DNA.
+     * Format : "Nom [type] → TERRAIN | Nom [type] → TERRAIN | ..."
+     * Utile pour afficher au joueur pourquoi une arène a ce type.
+     */
+    @Column(name = "dna_evidence", columnDefinition = "TEXT")
+    private String dnaEvidence;
+
+    /**
+     * Sport principal pratiqué sur ce terrain.
+     * Inféré automatiquement via les types Google Places lors de la découverte.
+     * Ex : FOOTBALL, BASKET, TENNIS, MUSCULATION, NATATION…
+     */
+    @Column(name = "sport_principal")
+    private String sportPrincipal;
 
     // --- Constructeurs ---
     public Arene() {}
@@ -97,6 +144,21 @@ public class Arene {
     public void setSportsDisponibles(List<String> sportsDisponibles) {
         this.sportsDisponibles = sportsDisponibles;
     }
+
+    public String getDnaType() { return dnaType; }
+    public void setDnaType(String dnaType) { this.dnaType = dnaType; }
+
+    public double getDnaConfidence() { return dnaConfidence; }
+    public void setDnaConfidence(double dnaConfidence) { this.dnaConfidence = dnaConfidence; }
+
+    public int getDnaPlacesCount() { return dnaPlacesCount; }
+    public void setDnaPlacesCount(int dnaPlacesCount) { this.dnaPlacesCount = dnaPlacesCount; }
+
+    public String getDnaEvidence() { return dnaEvidence; }
+    public void setDnaEvidence(String dnaEvidence) { this.dnaEvidence = dnaEvidence; }
+
+    public String getSportPrincipal() { return sportPrincipal; }
+    public void setSportPrincipal(String sportPrincipal) { this.sportPrincipal = sportPrincipal; }
 
     @Override
     public String toString() {

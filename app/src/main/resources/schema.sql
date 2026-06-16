@@ -7,7 +7,11 @@ CREATE TABLE IF NOT EXISTS equipe (
     nom TEXT NOT NULL UNIQUE,
     points INTEGER NOT NULL DEFAULT 0,
     xp INTEGER NOT NULL DEFAULT 0,
-    couleur TEXT
+    couleur TEXT,
+    affinity_type TEXT,                    -- [F7.1] Affinité de terrain choisie (ABYSSE, OLYMPE, EDEN, NEXUS)
+    current_aura TEXT,                   -- [F7] Aura active de l'équipe (ABYSSE, OLYMPE, EDEN, NEXUS)
+    capture_history TEXT,                -- [F7] JSON: liste des 10 derniers arèneId capturés
+    terrain_mastery_json TEXT             -- [F10] JSON: {type, activatedAt, expiresAt} ou NULL
 );
 
 -- Table JOUEUR
@@ -27,13 +31,23 @@ CREATE TABLE IF NOT EXISTS arene (
     latitude REAL NOT NULL,
     longitude REAL NOT NULL,
     equipe_controle INTEGER,
+    dna_type TEXT,                       -- Type de terrain (ABYSSE, OLYMPE, EDEN, NEXUS, NEUTRE)
+    dna_confidence REAL DEFAULT 0.0,     -- Score de confiance de la classification (0.0–1.0)
+    dna_places_count INTEGER DEFAULT 0,  -- Nombre de lieux Google Places inspectés
+    dna_evidence TEXT,                   -- Top 3 lieux ayant justifié le type (format texte)
+    sport_principal TEXT,                -- Sport principal du terrain (FOOTBALL, BASKET, TENNIS, MUSCULATION, NATATION…)
     FOREIGN KEY (equipe_controle) REFERENCES equipe(id) ON DELETE SET NULL
 );
 
 -- Table de jointure ARENE_SPORT (ManyToMany entre ARENE et SportType)
 CREATE TABLE IF NOT EXISTS arene_sport (
     arene_id TEXT NOT NULL,
-    sport_type TEXT NOT NULL CHECK (sport_type IN ('FOOTBALL', 'MUSCULATION', 'BASKET', 'TENNIS')),
+    sport_type TEXT NOT NULL CHECK (sport_type IN (
+        'FOOTBALL', 'MUSCULATION', 'BASKET', 'TENNIS',
+        'NATATION', 'ATHLETISME', 'CYCLISME', 'GOLF',
+        'RUGBY', 'VOLLEYBALL', 'HANDBALL', 'SPORT_COMBAT',
+        'BOWLING', 'PATINAGE', 'SKI'
+    )),
     PRIMARY KEY (arene_id, sport_type),
     FOREIGN KEY (arene_id) REFERENCES arene(id) ON DELETE CASCADE
 );
@@ -158,4 +172,31 @@ CREATE INDEX IF NOT EXISTS idx_active_perk_expires ON active_perk(expires_at);
 CREATE INDEX IF NOT EXISTS idx_perk_definition_level ON perk_definition(required_level);
 CREATE INDEX IF NOT EXISTS idx_message_equipe ON message(equipe_id);
 CREATE INDEX IF NOT EXISTS idx_message_joueur ON message(joueur_id);
+
+-- ============================================
+-- MIGRATIONS POUR BASES EXISTANTES
+-- (continue-on-error=true absorbe les erreurs si colonnes déjà présentes)
+-- ============================================
+ALTER TABLE arene ADD COLUMN dna_confidence REAL DEFAULT 0.0;
+ALTER TABLE arene ADD COLUMN dna_places_count INTEGER DEFAULT 0;
+ALTER TABLE arene ADD COLUMN dna_evidence TEXT;
+ALTER TABLE arene ADD COLUMN sport_principal TEXT;
+
+-- Migration arene_sport : recréer la table avec le nouveau CHECK étendu
+-- SQLite ne supporte pas ALTER TABLE ... MODIFY CONSTRAINT
+-- On recrée la table en préservant les données existantes
+CREATE TABLE IF NOT EXISTS arene_sport_new (
+    arene_id TEXT NOT NULL,
+    sport_type TEXT NOT NULL CHECK (sport_type IN (
+        'FOOTBALL', 'MUSCULATION', 'BASKET', 'TENNIS',
+        'NATATION', 'ATHLETISME', 'CYCLISME', 'GOLF',
+        'RUGBY', 'VOLLEYBALL', 'HANDBALL', 'SPORT_COMBAT',
+        'BOWLING', 'PATINAGE', 'SKI'
+    )),
+    PRIMARY KEY (arene_id, sport_type),
+    FOREIGN KEY (arene_id) REFERENCES arene(id) ON DELETE CASCADE
+);
+INSERT OR IGNORE INTO arene_sport_new SELECT * FROM arene_sport;
+DROP TABLE IF EXISTS arene_sport;
+ALTER TABLE arene_sport_new RENAME TO arene_sport;
 
