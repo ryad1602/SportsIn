@@ -2,9 +2,14 @@
 
 # 🧬 SportsIn — L'Avantage du Terrain
 
+**Par Ryad MESSAOUDI**
+
 **SportsIn** est un jeu de conquête sportive en territoire urbain inspiré des jeux en réalité augmentée (type Ingress ou Pokémon Go), centré sur la **pratique sportive réelle**.
 
 Cette feature, **L'Avantage du Terrain**, identifie automatiquement l'ADN de chaque arène via l'API **Google Places** et applique un système de bonus contextuel qui influence le résultat des matchs et la conquête des territoires.
+
+📄 **Documentation technique complète** : [docs/FEATURE_7_RECAP.md](docs/FEATURE_7_RECAP.md)
+🎤 **Présentation** : [docs/presentation/SportsIn_Presentation.pptx](docs/presentation/SportsIn_Presentation.pptx)
 
 ---
 
@@ -69,4 +74,4 @@ Démarre le frontend React sur **http://localhost:5173**.
 
 ## 👥 Crédits
 
-Ryad MESSAOUDI
+**Ryad MESSAOUDI**
